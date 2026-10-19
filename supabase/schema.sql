@@ -22,6 +22,7 @@ create table if not exists fk_trips (
   round_trip boolean not null default false,
   km numeric(9,2) not null,
   veh_id text references fk_vehicles(id) on delete set null,
+  validated boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index if not exists fk_trips_user_date on fk_trips(user_id, date);
@@ -44,3 +45,6 @@ drop policy if exists "fk_settings_own" on fk_settings;
 create policy "fk_vehicles_own" on fk_vehicles for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "fk_trips_own"    on fk_trips    for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "fk_settings_own" on fk_settings for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Mise à jour d'une base existante (v10 : onglet Arbitrage)
+alter table fk_trips add column if not exists validated boolean not null default false;

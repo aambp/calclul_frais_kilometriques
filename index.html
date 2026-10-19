@@ -85,9 +85,12 @@ td.n,th.n{text-align:right}
 .stat .l{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
 .stat .v{font:700 1.6rem/1.1 var(--f-display);font-variant-numeric:tabular-nums}
 .plate{display:inline-block;font:700 .8rem var(--f-display);border:1.5px solid var(--ink);border-radius:4px;padding:0 6px;letter-spacing:.05em}
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);
   padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:1100}
 nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--muted);padding:10px 4px;border-radius:8px;cursor:pointer}
+.badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:.7rem;line-height:18px;text-align:center;vertical-align:1px}
+.day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
+.day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
 .login{position:fixed;inset:0;z-index:2000;background:var(--bg);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
 .login form{width:100%;max-width:380px}
@@ -159,6 +162,16 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
   <div class="panel"><h2>Trajets</h2><div id="trips"></div></div>
 </section>
 
+<!-- ARBITRAGE -->
+<section data-tab="arb" hidden>
+  <div class="panel">
+    <h2>Trajets à arbitrer</h2>
+    <p class="sub" style="margin:0">Jours comptant plusieurs trajets : doublon de saisie ou vrais trajets multiples. Supprimez le trajet en trop ou validez la journée.</p>
+    <div class="stats" id="arbStats"></div>
+  </div>
+  <div id="arbList" style="display:grid;gap:10px"></div>
+</section>
+
 <!-- VÉHICULES -->
 <section data-tab="veh" hidden>
   <div class="panel">
@@ -207,10 +220,11 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 9</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 10</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
+  <button data-go="arb" type="button">Arbitrage <span class="badge" id="arbBadge" hidden></span></button>
   <button data-go="veh" type="button">Réglages</button>
   <button data-go="bar" type="button">Barème</button>
 </nav>
@@ -262,7 +276,7 @@ const LS = { get(k, d){ try{ const v = localStorage.getItem("fkm_"+k); return v 
 let vehicles = LS.get("vehicles", []);
 let trips = LS.get("trips", []);
 let bareme = LS.get("bareme", null) || BAREME_DEFAUT;
-const saveAll = () => { LS.set("vehicles", vehicles); LS.set("trips", trips); };
+const saveAll = () => { LS.set("vehicles", vehicles); LS.set("trips", trips); updateArbBadge(); };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = s => document.querySelector(s);
 const fmt = (n, d = 1) => n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -299,6 +313,7 @@ document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll("section[data-tab]").forEach(s => s.hidden = s.dataset.tab !== b.dataset.go);
   if (b.dataset.go === "hist") renderHist();
+  if (b.dataset.go === "arb") renderArb();
   if (b.dataset.go === "new" && map) setTimeout(() => map.invalidateSize(), 50);
   window.scrollTo(0, 0);
 });
@@ -501,6 +516,10 @@ $("#save").onclick = () => {
     $("#cancelSave").onclick = () => { msg.textContent = ""; };
     return;
   }
+  if (sameDay.length){ // second trajet confirmé : la journée est validée, elle n'apparaît pas en arbitrage
+    trip.validated = true; sameDay.forEach(t => t.validated = true);
+    if (session) remote(sb.from("fk_trips").update({ validated: true }).in("id", sameDay.map(t => t.id)));
+  }
   trips.push(trip); saveAll(); sync.trip(trip);
   msg.textContent = "";
   $("#calcMsg").textContent = `✓ Trajet enregistré : ${fmt(one * factor)} km. Visible dans Historique.`; $("#calcMsg").className = "msg ok";
@@ -534,6 +553,52 @@ function renderHist(){
   });
 }
 const short = s => (s || "—").split(",").slice(0, 2).join(",");
+
+/* ===== Arbitrage : jours comptant plusieurs trajets non validés ===== */
+function arbGroups(){
+  const byDate = {};
+  trips.forEach(t => (byDate[t.date] = byDate[t.date] || []).push(t));
+  return Object.entries(byDate).filter(([, l]) => l.length > 1 && l.some(t => !t.validated))
+    .sort((a, b) => a[0].localeCompare(b[0])).map(([date, list]) => ({ date, list }));
+}
+function updateArbBadge(){
+  const n = arbGroups().length, b = $("#arbBadge"); if (!b) return;
+  b.textContent = n; b.hidden = !n;
+}
+/* Gain si l'on ne garde que le plus long trajet de chaque jour, par véhicule et par année (tranches du barème) */
+function arbImpact(groups){
+  const extra = new Set(); groups.forEach(g => [...g.list].sort((a, b) => b.km - a.km).slice(1).forEach(t => extra.add(t.id)));
+  let km = 0, eurDiff = 0; const keys = new Set();
+  trips.filter(t => extra.has(t.id)).forEach(t => { km += t.km; keys.add(t.date.slice(0, 4) + "|" + t.vehId); });
+  keys.forEach(k => { const [y, vid] = k.split("|"), veh = vehicles.find(v => v.id === vid);
+    const all = tripsOf(y, vid), d = all.reduce((s, t) => s + t.km, 0), dKept = all.filter(t => !extra.has(t.id)).reduce((s, t) => s + t.km, 0);
+    eurDiff += annualAmount(d, veh) - annualAmount(dKept, veh); });
+  return { km, eur: eurDiff, n: extra.size };
+}
+function renderArb(){
+  const groups = arbGroups(), imp = arbImpact(groups);
+  $("#arbStats").innerHTML = `<div class="stat"><div class="l">Jours à arbitrer</div><div class="v">${groups.length}</div></div>
+    <div class="stat"><div class="l">Trajets en trop possibles</div><div class="v">${imp.n} · ${fmt(imp.km, 0)} km</div></div>
+    <div class="stat"><div class="l">Impact si doublons</div><div class="v">${eur(imp.eur)}</div></div>`;
+  $("#arbList").innerHTML = groups.length ? groups.map(g => `<div class="day panel">
+      <h3><span>${new Date(g.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span><span class="tag">${g.list.length} trajets</span></h3>
+      ${g.list.map(t => { const v = vehicles.find(x => x.id === t.vehId);
+        return `<div class="trip"><div class="r">${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
+          <div class="m">${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${esc(v ? v.name : "véhicule supprimé")}${t.motif ? " · " + esc(t.motif) : ""}${t.validated ? " · validé" : ""}</div>
+          <div class="m" style="text-align:right"><button class="btn danger" data-arb-del="${t.id}" type="button">Supprimer</button></div></div>`; }).join("")}
+      <button class="btn ghost" data-arb-ok="${g.date}" type="button">Valider : garder les ${g.list.length} trajets</button>
+    </div>`).join("")
+    : `<div class="panel"><p class="sub" style="margin:0">✓ Aucun trajet suspect. Chaque jour compte au plus un trajet, ou a été validé.</p></div>`;
+  document.querySelectorAll("[data-arb-del]").forEach(b => b.onclick = async () => {
+    if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer la suppression"; b.dataset.confirm = "1"; return; }
+    const id = b.dataset.arbDel; trips = trips.filter(t => t.id !== id); saveAll(); renderArb(); await sync.delTrip(id);
+  });
+  document.querySelectorAll("[data-arb-ok]").forEach(b => b.onclick = async () => {
+    const list = trips.filter(t => t.date === b.dataset.arbOk), ids = list.map(t => t.id);
+    if (session && !(await remote(sb.from("fk_trips").update({ validated: true }).in("id", ids)))) return;
+    list.forEach(t => t.validated = true); saveAll(); renderArb(); toast("Journée validée.");
+  });
+}
 $("#fYear").onchange = renderHist; $("#fVeh").onchange = renderHist;
 
 /* ===== Export / sauvegarde ===== */
@@ -638,9 +703,7 @@ $("#restore").onchange = async e => {
       t.vehId = v.id; delete t._veh;
     });
     const known = new Set(trips.map(t => t.id)), newOnes = list.filter(t => !known.has(t.id));
-    // Règle un trajet par jour : les trajets tombant un jour déjà occupé (en base ou plus haut dans le fichier) attendent une validation
-    const busy = new Set(trips.map(t => t.date)), fresh = [], pending = [];
-    newOnes.forEach(t => { if (busy.has(t.date)) pending.push(t); else { fresh.push(t); busy.add(t.date); } });
+    const fresh = newOnes; // tout est importé ; les jours à plusieurs trajets partent dans l'onglet Arbitrage
     // Véhicules utilisés par l'import (nouveaux ou déjà connus de l'appareil) : garantis présents en base avant les trajets
     const usedIds = new Set(fresh.map(t => t.vehId)), usedVeh = vehicles.concat(newVeh).filter(v => usedIds.has(v.id));
     if (usedVeh.length && !(await remote(sb && session ? sb.from("fk_vehicles").upsert(usedVeh.map(toDbVeh), { onConflict: "id" }) : null))) throw new Error("véhicules non enregistrés en base");
@@ -650,15 +713,11 @@ $("#restore").onchange = async e => {
     m.innerHTML = esc(`✓ ${fresh.length} trajet(s) importé(s), ${fmt(km, 0)} km` + (list.length - newOnes.length ? ` · ${list.length - newOnes.length} déjà présent(s), ignoré(s)` : "")
       + (newVeh.length ? ` · véhicule créé : ${newVeh.map(v => v.name + " (" + v.cv + " CV)").join(", ")}` : "") + (skipped.length ? ` · lignes ignorées : ${skipped.join(", ")}` : ""));
     m.className = "msg ok";
-    if (pending.length){
-      m.innerHTML += `<div class="banner" style="margin-top:10px"><div>⚠ ${pending.length} trajet(s) tombent un jour qui a déjà un trajet : `
-        + pending.map(t => `${new Date(t.date).toLocaleDateString("fr-FR")} (${fmt(t.km)} km)`).join(", ")
-        + `.</div><div class="row"><button class="btn" id="pendYes" type="button">Les importer aussi</button><button class="btn ghost" id="pendNo" type="button">Ne pas les importer</button></div></div>`;
-      $("#pendYes").onclick = async () => {
-        try{ await insertTrips(pending); m.textContent = `✓ ${pending.length} trajet(s) supplémentaire(s) importé(s).`; m.className = "msg ok"; }
-        catch(err){ m.textContent = "Import impossible : " + err.message + (lastDbError ? " — " + lastDbError : "") + "."; m.className = "msg err"; lastDbError = ""; }
-      };
-      $("#pendNo").onclick = () => { m.textContent = `${pending.length} trajet(s) non importé(s).`; m.className = "msg"; };
+    const nArb = arbGroups().length;
+    if (nArb){
+      m.innerHTML += `<div class="banner" style="margin-top:10px"><div>⚠ ${nArb} jour(s) comptent plusieurs trajets : doublons possibles.</div>
+        <button class="btn" id="goArb" type="button">Arbitrer maintenant</button></div>`;
+      $("#goArb").onclick = () => document.querySelector('nav button[data-go="arb"]').click();
     }
   }catch(err){ m.textContent = "Import impossible : " + err.message + (lastDbError ? " — " + lastDbError : "") + "."; m.className = "msg err"; lastDbError = ""; }
 };
@@ -691,8 +750,8 @@ let toastT;
 function toast(txt, err){ const t = $("#toast"); t.textContent = txt; t.className = "toast" + (err ? " err" : ""); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, err ? 6000 : 2500); }
 // user_id envoyé explicitement : en envoi groupé, une colonne absente arrive vide au lieu de prendre sa valeur par défaut
 const uidCol = () => session ? { user_id: session.user.id } : {};
-const toDbTrip = t => ({ ...uidCol(), id: t.id, date: t.date, from_addr: t.from || null, to_addr: t.to || null, motif: t.motif || null, km_one: t.kmOne, round_trip: !!t.roundTrip, km: t.km, veh_id: t.vehId || null });
-const fromDbTrip = r => ({ id: r.id, date: r.date, from: r.from_addr || "", to: r.to_addr || "", motif: r.motif || "", kmOne: +r.km_one, roundTrip: r.round_trip, km: +r.km, vehId: r.veh_id || "" });
+const toDbTrip = t => ({ ...uidCol(), id: t.id, date: t.date, from_addr: t.from || null, to_addr: t.to || null, motif: t.motif || null, km_one: t.kmOne, round_trip: !!t.roundTrip, km: t.km, veh_id: t.vehId || null, validated: !!t.validated });
+const fromDbTrip = r => ({ id: r.id, date: r.date, from: r.from_addr || "", to: r.to_addr || "", motif: r.motif || "", kmOne: +r.km_one, roundTrip: r.round_trip, km: +r.km, vehId: r.veh_id || "", validated: !!r.validated });
 const toDbVeh = v => ({ ...uidCol(), id: v.id, name: v.name, cv: v.cv, elec: !!v.elec, plate: v.plate || null });
 let lastDbError = "";
 async function remote(q){
