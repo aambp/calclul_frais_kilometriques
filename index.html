@@ -57,7 +57,7 @@ input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);ou
 .total{display:flex;justify-content:space-between;align-items:end;gap:12px;padding-top:4px;border-top:1px dashed var(--line)}
 .big{font:700 2.3rem/1 var(--f-display);font-variant-numeric:tabular-nums}
 .big small{font-size:1rem;color:var(--muted);margin-left:2px}
-.msg{font-size:.88rem;color:var(--muted)} .msg.err{color:var(--warn)}
+.msg{font-size:.88rem;color:var(--muted)} .msg.err{color:var(--warn)} .msg.ok{color:var(--ok);font-weight:600}
 table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
 th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:6px 6px;border-bottom:1px solid var(--line)}
 td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -118,6 +118,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
       <div style="text-align:right"><div class="sub">Indemnité estimée</div><div class="big" id="eurTot">0<small>€</small></div></div>
     </div>
     <button class="btn" id="save" type="button">Enregistrer le trajet</button>
+    <div class="msg" id="saveMsg" role="status"></div>
   </div>
 </section>
 
@@ -155,6 +156,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     </div>
     <label class="check"><input type="checkbox" id="vElec"> 100 % électrique (barème majoré de 20 %)</label>
     <button class="btn" id="vAdd" type="button">Ajouter</button>
+    <div class="msg" id="vMsg" role="status"></div>
   </div>
   <div class="panel"><h2>Mes véhicules</h2><div id="vList"></div></div>
 </section>
@@ -276,9 +278,13 @@ function renderVehicles(){
 }
 $("#vAdd").onclick = () => {
   const name = $("#vName").value.trim(), cv = parseInt($("#vCv").value, 10);
-  if (!name || !cv) return;
-  vehicles.push({ id: uid(), name, cv, elec: $("#vElec").checked, plate: $("#vPlate").value.trim().toUpperCase() });
+  const m = $("#vMsg");
+  if (!name || !cv){ m.textContent = "Renseignez le nom et la puissance fiscale."; m.className = "msg err"; return; }
+  const v = { id: uid(), name, cv, elec: $("#vElec").checked, plate: $("#vPlate").value.trim().toUpperCase() };
+  vehicles.push(v);
   saveAll(); $("#vName").value = ""; $("#vPlate").value = ""; $("#vElec").checked = false; renderVehicles();
+  $("#veh").value = v.id; updateTotal(); $("#saveMsg").textContent = "";
+  m.textContent = `✓ ${name} ajouté et sélectionné pour vos trajets.`; m.className = "msg ok";
 };
 
 /* ===== Autocomplétion adresses (Géoplateforme IGN / BAN, repli Nominatim) ===== */
@@ -430,13 +436,17 @@ function updateTotal(){
 /* ===== Enregistrer ===== */
 const today = () => new Date().toISOString().slice(0, 10);
 $("#save").onclick = () => {
-  const one = parseFloat($("#kmOne").value) || 0, msg = $("#calcMsg");
-  if (!vehicles.length || !$("#veh").value){ msg.textContent = "Ajoutez d'abord un véhicule (onglet Véhicules)."; msg.className = "msg err"; return; }
-  if (one <= 0){ msg.textContent = "Distance manquante."; msg.className = "msg err"; return; }
+  const one = parseFloat(String($("#kmOne").value).replace(",", ".")) || 0, msg = $("#saveMsg");
+  if (!vehicles.length || !$("#veh").value){
+    msg.innerHTML = `Aucun véhicule. <button class="btn ghost" id="goVeh" type="button" style="padding:6px 10px">Ajouter un véhicule</button>`; msg.className = "msg err";
+    $("#goVeh").onclick = () => document.querySelector('nav button[data-go="veh"]').click(); return; }
+  if (one <= 0){ msg.textContent = "Distance manquante : saisissez les km aller."; msg.className = "msg err"; return; }
   trips.push({ id: uid(), date: $("#date").value || today(), from: $("#from").value, to: $("#to").value, motif: $("#motif").value.trim(),
                kmOne: Math.round(one * 10) / 10, roundTrip: factor === 2, km: Math.round(one * factor * 10) / 10, vehId: $("#veh").value });
   saveAll();
-  msg.textContent = `Trajet enregistré : ${fmt(one * factor)} km.`; msg.className = "msg";
+  msg.textContent = "";
+  $("#calcMsg").textContent = `✓ Trajet enregistré : ${fmt(one * factor)} km. Visible dans Historique.`; $("#calcMsg").className = "msg ok";
+  window.scrollTo({ top: 0, behavior: "smooth" });
   applyDefaults(); $("#motif").value = ""; $("#resPanel").hidden = true; $("#kmOne").value = "";
 };
 
