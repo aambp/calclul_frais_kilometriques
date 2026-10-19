@@ -194,6 +194,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     </div>
     <div class="stats" id="stats"></div>
     <div id="bulk"></div>
+    <div id="orphans"></div>
     <div class="scroll" id="annual"></div>
     <div class="row"><button class="btn ghost" id="csv" type="button">Exporter CSV</button><button class="btn ghost" id="backup" type="button">Sauvegarde JSON</button></div>
     <label>Importer des trajets (CSV ou sauvegarde JSON)<input type="file" id="restore" accept=".csv,.json,text/csv,application/json"></label>
@@ -260,7 +261,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 17</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 18</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -373,8 +374,8 @@ function renderVehicles(){
       <button class="btn danger" data-del-veh="${v.id}" type="button">Supprimer</button></div>`).join("")
     : `<p class="sub">Aucun véhicule. Ajoutez-en un pour calculer les indemnités.</p>`;
   document.querySelectorAll("[data-del-veh]").forEach(b => b.onclick = () => {
-    const id = b.dataset.delVeh;
-    if (trips.some(t => t.vehId === id) && b.dataset.confirm !== "1"){ b.textContent = "Trajets liés : confirmer ?"; b.dataset.confirm = "1"; return; }
+    const id = b.dataset.delVeh, n = trips.filter(t => t.vehId === id).length;
+    if (n){ toast(`${n} trajet(s) utilisent ce véhicule : réaffectez-les d'abord (Historique, clic sur le véhicule).`, true); return; }
     vehicles = vehicles.filter(v => v.id !== id); saveAll(); renderVehicles(); updateTotal(); sync.delVeh(id);
   });
 }
@@ -692,6 +693,7 @@ function renderHist(){
     if ($("#fVeh").value) $("#tripsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   renderVehTools(vf, list);
+  renderOrphans();
   $("#trips").innerHTML = list.length ? list.map(t => { const v = vehicles.find(x => x.id === t.vehId), st = statusOf(t, sus);
     const act = st === "todo" ? `<button class="btn ghost mini" data-val="${t.id}" type="button">Valider</button>`
       : st === "ok" ? `<button class="btn danger" data-unval="${t.id}" type="button">Annuler validation</button>`
@@ -719,12 +721,23 @@ function vehPicker(t, v){
   return `<select class="move" data-move="${t.id}" aria-label="Véhicule du trajet">${[v].concat(alt).map(x => `<option value="${x.id}" ${x.id === v.id ? "selected" : ""}>${esc(x.name)}</option>`).join("")}</select>`;
 }
 async function moveTrips(list, vehId){
-  list = list.filter(t => !t.validated && t.vehId !== vehId); if (!list.length) return;
+  list = list.filter(t => (!t.validated || isOrphan(t)) && t.vehId !== vehId); if (!list.length) return;
   const ids = list.map(t => t.id);
   for (let i = 0; i < ids.length; i += 200)
     if (session && !(await remote(sb && session && sb.from("fk_trips").update({ veh_id: vehId }).in("id", ids.slice(i, i + 200))))) return;
   list.forEach(t => t.vehId = vehId); saveAll(); renderHist();
   toast(`${list.length} trajet(s) réaffecté(s) à ${vehicles.find(v => v.id === vehId).name}.`);
+}
+/* Trajets dont le véhicule a été supprimé : indemnité nulle tant qu'ils ne sont pas rattachés */
+const isOrphan = t => !vehicles.some(v => v.id === t.vehId);
+function renderOrphans(){
+  const box = $("#orphans"), orph = trips.filter(isOrphan);
+  if (!orph.length || !vehicles.length){ box.innerHTML = orph.length ? `<div class="banner">⚠ ${orph.length} trajet(s) sans véhicule : ajoutez un véhicule dans Réglages pour les rattacher.</div>` : ""; return; }
+  const km = orph.reduce((s, t) => s + t.km, 0);
+  box.innerHTML = `<div class="banner"><div>⚠ <b>${orph.length} trajet(s) sans véhicule</b> (${fmt(km, 0)} km) : leur véhicule a été supprimé, leur indemnité est donc à 0 €.</div>
+    <div class="row"><label>Rattacher au véhicule<select id="orphTo">${vehicles.map(v => `<option value="${v.id}">${esc(v.name)} (${v.cv} CV${v.elec ? ", électrique" : ""})</option>`).join("")}</select></label>
+    <button class="btn" id="orphGo" type="button">Rattacher les ${orph.length} trajet(s)</button></div></div>`;
+  $("#orphGo").onclick = () => moveTrips(orph, $("#orphTo").value);
 }
 function renderVehTools(vf, list){
   const v = vehicles.find(x => x.id === vf), box = $("#vehTools");
