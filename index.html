@@ -157,6 +157,62 @@ nav .badge{position:absolute;top:2px;left:calc(50% + 6px)}
 .trip .pick{display:flex;align-items:center;gap:10px;min-width:0}
 .trip .pick input{width:20px;height:20px;flex:none;accent-color:var(--st-bad)}
 .trip.picked{background:color-mix(in srgb,var(--st-bad) 9%,transparent);border-radius:8px}
+.hello{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px}
+.hello h2{font-size:1.7rem;margin:0}
+.favs{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px}
+.favs:empty{display:none}
+.fav{display:grid;gap:2px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 14px;cursor:pointer;font:500 .9rem var(--f-body);transition:border-color .15s,transform .1s}
+.fav:hover{border-color:var(--accent)} .fav:active{transform:scale(.98)}
+.fav b{font:600 1.05rem var(--f-display);color:var(--accent)} .fav span{color:var(--muted)}
+.fav-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px;background:var(--surface)}
+.fav-card b{font:600 1.1rem var(--f-display)}
+.fav-card .row{display:flex;flex-wrap:wrap;gap:8px} .fav-card .row .btn{flex:1 1 auto;white-space:nowrap}
+.fav-add{display:flex;flex-wrap:wrap;gap:8px}
+.fav-add input{flex:1 1 220px} .fav-add .btn{flex:0 0 auto}
+.memo{padding:10px 12px;border-radius:8px;background:var(--accent-soft);font-size:.92rem}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:520px){.row3{grid-template-columns:1fr}}
+.home-alerts{display:grid;gap:10px}
+.home-alerts:empty{display:none}
+.alert{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;border-radius:12px;padding:12px 14px;border:1px solid var(--line);background:var(--surface)}
+.alert.todo{border-color:var(--st-todo);background:color-mix(in srgb,var(--st-todo) 9%,var(--surface))}
+.alert.bad{border-color:var(--st-bad);background:color-mix(in srgb,var(--st-bad) 8%,var(--surface))}
+.alert.info{border-color:var(--accent);background:var(--accent-soft)}
+.stat.link{cursor:pointer} .stat.link:hover{border-color:var(--accent)}
+.tranche{display:grid;gap:6px;padding-block:6px}
+.tranche + .tranche{border-top:1px solid var(--line);padding-top:12px}
+.tbar{position:relative;height:12px;border-radius:6px;background:var(--line);overflow:hidden}
+.tbar i{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:6px}
+.tbar.t2 i{background:var(--st-todo)} .tbar.t3 i{background:var(--st-bad)}
+.tticks{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.close-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.close-row:last-child{border-bottom:0}
+.close-row b{text-transform:capitalize}
+.hbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:8px}
+.hbar input{flex:1 1 240px} .hbar .seg{flex:0 0 220px}
+.swipe-hint{display:none;margin:0 0 6px}
+@media (hover:none) and (pointer:coarse){.swipe-hint{display:block}}
+.hcal{display:grid;gap:8px;margin-bottom:10px}
+.hcal .cal-head{display:flex;justify-content:space-between;align-items:center}
+.hcal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.hcal-grid .wd{text-align:center;font-size:.7rem;font-weight:600;text-transform:uppercase;color:var(--muted)}
+.hday{min-height:58px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:4px 6px;display:grid;align-content:space-between;text-align:left;cursor:pointer;color:var(--ink);font:600 .85rem var(--f-body)}
+.hday.we{background:none;border-style:dashed;color:var(--muted)}
+.hday.hol{background:var(--line);color:var(--muted)}
+.hday.on{outline:2px solid var(--accent);outline-offset:-2px}
+.hday small{font-weight:500;font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.hday .dots{display:flex;gap:3px}
+.hday .dots i{width:7px;height:7px;border-radius:50%;background:var(--st-todo)}
+.hday .dots i.ok{background:var(--st-ok)} .hday .dots i.bad{background:var(--st-bad)}
+.trip{transition:transform .18s ease,background .15s}
+.trip.sw-ok{background:color-mix(in srgb,var(--st-ok) 14%,transparent)}
+.trip.sw-del{background:color-mix(in srgb,var(--st-bad) 14%,transparent)}
+.toast{display:flex;align-items:center;gap:12px}
+.toast-undo{background:none;border:1px solid currentColor;color:inherit;border-radius:6px;padding:3px 10px;font:600 .85rem var(--f-body);cursor:pointer}
+dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);padding:0;width:min(560px,calc(100% - 24px));box-shadow:0 20px 60px rgb(0 0 0/.3)}
+dialog::backdrop{background:rgb(10 15 25/.45)}
+dialog form{display:grid;gap:12px;padding:18px}
+dialog h2{margin:0}
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
@@ -180,8 +236,21 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 <div class="wrap">
 <header><h1><img class="logo" src="logo.png" alt="AMN CONSEIL">Frais <span>KM</span></h1><span class="sub" id="yearLbl"></span></header>
 
+<!-- ACCUEIL -->
+<section data-tab="home">
+  <div class="hello"><h2 id="hTitle">Bonjour</h2><span class="sub" id="hSub"></span></div>
+  <div class="panel"><h2>Saisie rapide</h2><div id="homeFavs" class="favs"></div></div>
+  <div id="homeAlerts" class="home-alerts"></div>
+  <div class="panel"><h2 id="homeMonthTitle">Ce mois-ci</h2><div class="stats" id="homeStats"></div></div>
+  <div class="panel"><h2>Barème : où en êtes-vous ?</h2><div id="homeTranche"></div></div>
+  <div class="panel"><h2>Clôture mensuelle</h2>
+    <p class="sub" style="margin:0">Clôturer un mois valide tous ses trajets (ils deviennent verrouillés) et génère le relevé PDF du mois.</p>
+    <div id="homeClose"></div></div>
+</section>
+
 <!-- NOUVEAU TRAJET -->
-<section data-tab="new">
+<section data-tab="new" hidden>
+  <div class="favs" id="favBar"></div>
   <div class="banner" id="importBanner" hidden>
     <div id="importTxt"></div>
     <div class="row"><button class="btn" id="importYes" type="button">Importer dans mon compte</button><button class="btn ghost" id="importNo" type="button">Ignorer</button></div>
@@ -221,6 +290,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     </div>
     <button class="btn" id="save" type="button">Enregistrer le trajet</button>
     <div class="msg" id="saveMsg" role="status"></div>
+    <div class="fav-add"><input id="favName" placeholder="Nom du favori (ex. Domicile ⇄ Bureau)" aria-label="Nom du favori"><button class="btn ghost" id="favAdd" type="button">★ Ajouter aux favoris</button></div>
   </div>
 </section>
 
@@ -235,11 +305,16 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <div id="bulk"></div>
     <div id="orphans"></div>
     <div class="scroll" id="annual"></div>
-    <div class="row"><button class="btn ghost" id="csv" type="button">Exporter CSV</button><button class="btn ghost" id="backup" type="button">Sauvegarde JSON</button></div>
+    <div class="row3"><button class="btn" id="repBtn" type="button">Relevé PDF</button><button class="btn ghost" id="csv" type="button">Exporter CSV</button><button class="btn ghost" id="backup" type="button">Sauvegarde JSON</button></div>
     <label>Importer des trajets (CSV ou sauvegarde JSON)<input type="file" id="restore" accept=".csv,.json,text/csv,application/json"></label>
     <div class="msg" id="impMsg" role="status"></div>
   </div>
-  <div class="panel" id="tripsPanel"><h2 id="tripsTitle">Trajets</h2><div id="vehTools"></div><div id="trips"></div></div>
+  <div class="panel" id="tripsPanel"><h2 id="tripsTitle">Trajets</h2><div id="vehTools"></div>
+    <div class="hbar"><input type="search" id="hSearch" placeholder="Rechercher un motif, une adresse, une date…" aria-label="Rechercher">
+      <div class="seg" id="hView"><button data-v="list" class="on" type="button">Liste</button><button data-v="cal" type="button">Calendrier</button></div></div>
+    <p class="sub swipe-hint">Astuce : glissez un trajet vers la droite pour le valider, vers la gauche pour le supprimer.</p>
+    <div id="hCal" class="hcal" hidden></div>
+    <div id="trips"></div></div>
 </section>
 
 <!-- ARBITRAGE -->
@@ -272,6 +347,13 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <div class="msg" id="pMsg"></div>
   </div>
   <div class="panel">
+    <h2>Identité sur les relevés PDF</h2>
+    <div class="row"><label>Nom et prénom<input id="meName" autocomplete="name"></label><label>Société<input id="meCompany" autocomplete="organization"></label></div>
+    <label>Adresse (option)<input id="meAddress" autocomplete="street-address"></label>
+    <button class="btn ghost" id="meSave" type="button">Enregistrer</button>
+  </div>
+  <div class="panel"><h2>Trajets favoris</h2><div id="favList"></div></div>
+  <div class="panel">
     <h2>Ajouter un véhicule</h2>
     <label>Nom<input id="vName" placeholder="Ex. Peugeot 308"></label>
     <div class="row">
@@ -285,8 +367,8 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
   <div class="panel"><h2>Mes véhicules</h2><div id="vList"></div></div>
 </section>
 
-<!-- BARÈME -->
-<section data-tab="bar" hidden>
+<!-- BARÈME (affiché avec les Réglages) -->
+<section data-tab="veh" hidden>
   <div class="panel">
     <h2 id="barTitle"></h2>
     <p class="sub" id="barSrc" style="margin:0"></p>
@@ -304,14 +386,14 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 22</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 23</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
-  <button data-go="new" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg><span class="nl">Trajet</span></button>
+  <button data-go="home" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19z"/></svg><span class="nl">Accueil</span></button>
+  <button data-go="new" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg><span class="nl">Trajet</span></button>
   <button data-go="hist" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg><span class="nl">Historique</span></button>
   <button data-go="arb" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 20h12M5 7h14"/><path d="M5 7l-2.6 6a3 3 0 0 0 5.2 0L5 7zM19 7l-2.6 6a3 3 0 0 0 5.2 0L19 7z"/></svg><span class="nl">Arbitrage</span><span class="badge" id="arbBadge" hidden></span></button>
   <button data-go="veh" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg><span class="nl">Réglages</span></button>
-  <button data-go="bar" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M3.5 9h17M9.5 9v11"/></svg><span class="nl">Barème</span></button>
   <div class="nav-foot">© 2026 AMN CONSEIL</div>
 </nav>
 
@@ -330,6 +412,32 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
   </form>
 </div>
 <div id="toast" class="toast" hidden></div>
+
+<dialog id="editDlg" aria-labelledby="editTitle">
+  <form id="editForm" method="dialog">
+    <h2 id="editTitle">Modifier le trajet</h2>
+    <div class="row"><label>Date<input type="date" id="eDate" required></label><label>Véhicule<select id="eVeh"></select></label></div>
+    <label class="ac">Départ<input id="eFrom" autocomplete="off"><ul hidden></ul></label>
+    <label class="ac">Arrivée<input id="eTo" autocomplete="off"><ul hidden></ul></label>
+    <label>Motif<input id="eMotif"></label>
+    <div class="row"><label>Km aller<input id="eKm" inputmode="decimal" required></label><label class="check" style="align-self:end"><input type="checkbox" id="eAR"> Aller-retour</label></div>
+    <div class="msg err" id="eMsg" role="status"></div>
+    <div class="row"><button class="btn ghost" id="eCancel" type="button">Annuler</button><button class="btn" type="submit">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<dialog id="repDlg" aria-labelledby="repTitle">
+  <form id="repForm" method="dialog">
+    <h2 id="repTitle">Relevé PDF</h2>
+    <div class="seg" id="repKind"><button data-v="month" class="on" type="button">Un mois</button><button data-v="year" type="button">Une année</button></div>
+    <div class="row"><label>Année<select id="repYear"></select></label><label id="repMonthWrap">Mois<select id="repMonth"></select></label></div>
+    <label>Véhicule<select id="repVeh"></select></label>
+    <label class="check"><input type="checkbox" id="repOnlyOk" checked> Trajets validés uniquement</label>
+    <div class="sub" id="repInfo"></div>
+    <div class="msg err" id="repMsg" role="status"></div>
+    <div class="row"><button class="btn ghost" id="repCancel" type="button">Fermer</button><button class="btn" id="repGo" type="submit">Générer le PDF</button></div>
+  </form>
+</dialog>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
@@ -362,7 +470,8 @@ const LS = { get(k, d){ try{ const v = localStorage.getItem("fkm_"+k); return v 
 let vehicles = LS.get("vehicles", []);
 let trips = LS.get("trips", []);
 let bareme = LS.get("bareme", null) || BAREME_DEFAUT;
-const saveAll = () => { LS.set("vehicles", vehicles); LS.set("trips", trips); updateArbBadge(); };
+const saveAll = () => { LS.set("vehicles", vehicles); LS.set("trips", trips); updateArbBadge();
+  const h = document.querySelector('section[data-tab="home"]'); if (h && !h.hidden) renderHome(); };
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const $ = s => document.querySelector(s);
 const fmt = (n, d = 1) => n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -398,6 +507,7 @@ function marginalAmount(km, vehId, date){
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
   document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll("section[data-tab]").forEach(s => s.hidden = s.dataset.tab !== b.dataset.go);
+  if (b.dataset.go === "home") renderHome();
   if (b.dataset.go === "hist") renderHist();
   if (b.dataset.go === "arb") renderArb();
   if (b.dataset.go === "new" && map) setTimeout(() => map.invalidateSize(), 50);
@@ -500,7 +610,7 @@ $("#swap").onclick = () => {
   $("#from").value = t; $("#to").value = f; points.from = points.to; points.to = pf;
 };
 $("#pSave").onclick = () => {
-  places = { home: $("#pHome").value.trim(), work: $("#pWork").value.trim() };
+  places = { ...places, home: $("#pHome").value.trim(), work: $("#pWork").value.trim() };
   LS.set("places", places); sync.settings(); renderChips(); applyDefaults();
   $("#pMsg").textContent = "Adresses enregistrées.";
 };
@@ -567,6 +677,30 @@ $("#calc").onclick = async () => {
     msg.textContent = "Le calcul a échoué (" + e.message + "). Saisissez la distance à la main ci-dessous."; msg.className = "msg err";
     routes = []; $("#routes").innerHTML = ""; $("#resPanel").hidden = false;
   }finally{ $("#calc").disabled = false; }
+};
+
+/* Distance mémorisée : si l'itinéraire a déjà été fait, on reprend ses km sans recalculer */
+const routeCalc = $("#calc").onclick;
+const placeKey = s => norm(s).replace(/[^a-z0-9 ]/g, " ").replace(/\b(france|avenue|av|rue|bd|boulevard|chemin|chem|allee|place|pl)\b/g, " ").replace(/\s+/g, " ").trim();
+/* Même lieu si les mots de l'adresse la plus courte figurent tous dans l'autre (code postal, « France », numéro de rue facultatifs) */
+const samePlace = (a, b) => {
+  const A = new Set(placeKey(a).split(" ").filter(w => w.length > 1)), B = new Set(placeKey(b).split(" ").filter(w => w.length > 1));
+  if (A.size < 2 || B.size < 2) return false;
+  const [small, big] = A.size <= B.size ? [A, B] : [B, A];
+  const missing = [...small].filter(w => !big.has(w));
+  return missing.length === 0 || (missing.length === 1 && /^\d+$/.test(missing[0]) && small.size >= 4);
+};
+function knownDistance(from, to){
+  return [...trips].sort((a, b) => b.date.localeCompare(a.date))
+    .find(t => (samePlace(t.from, from) && samePlace(t.to, to)) || (samePlace(t.from, to) && samePlace(t.to, from))) || null;
+}
+$("#calc").onclick = async () => {
+  const k = knownDistance($("#from").value, $("#to").value);
+  if (!k){ $("#map").hidden = false; return routeCalc(); }
+  routes = []; $("#map").hidden = true; $("#resPanel").hidden = false; $("#calcMsg").textContent = "";
+  $("#routes").innerHTML = `<div class="memo">📍 Distance reprise de votre trajet du ${frDate(k.date)} : <b>${fmt(k.kmOne)} km</b> aller. <button type="button" class="linkbtn" id="reroute">Recalculer l'itinéraire</button></div>`;
+  $("#kmOne").value = k.kmOne; updateTotal();
+  $("#reroute").onclick = () => { $("#map").hidden = false; routeCalc(); };
 };
 
 /* ===== Aller simple / aller-retour + total ===== */
@@ -721,7 +855,10 @@ function renderHist(){
   const vf = $("#fVeh").value, rank = { bad: 0, todo: 1, ok: 2 }, sus0 = suspectIds();
   const all = tripsOf(cy, vf).sort((a, b) => (rank[statusOf(a, sus0)] - rank[statusOf(b, sus0)]) || b.date.localeCompare(a.date));
   if (histStatus && !all.some(t => statusOf(t, sus0) === histStatus)) histStatus = "";
-  const list = histStatus ? all.filter(t => statusOf(t, sus0) === histStatus) : all;
+  const q = norm($("#hSearch").value).split(/\s+/).filter(Boolean);
+  const hay = t => norm([t.motif, t.from, t.to, frDate(t.date), t.date, (vehicles.find(v => v.id === t.vehId) || {}).name].join(" "));
+  const list = all.filter(t => (!histStatus || statusOf(t, sus0) === histStatus) && (!hDay || t.date === hDay) && q.every(w => hay(t).includes(w)));
+  renderHCal(cy, all, sus0);
   const totKm = all.reduce((s, t) => s + t.km, 0), totEur = all.reduce((s, t) => s + tripAmount(t), 0);
   const sus = sus0, cnt = { ok: 0, todo: 0, bad: 0 }; all.forEach(t => cnt[statusOf(t, sus)]++);
   $("#stats").innerHTML = `<div class="stat"><div class="l">Kilomètres ${cy}</div><div class="v">${fmt(totKm, 0)} km</div></div>
@@ -747,21 +884,20 @@ function renderHist(){
     histStatus = histStatus === b.dataset.stf ? "" : b.dataset.stf; renderHist();
     if (histStatus) $("#tripsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  $("#trips").innerHTML = (histStatus ? `<div class="filter-note">${{ bad: "Trajets suspects", todo: "Trajets à valider", ok: "Trajets validés" }[histStatus]} : ${list.length} · <button type="button" class="linkbtn" id="stfClear">Afficher tous les trajets</button></div>` : "")
+  const notes = [histStatus && { bad: "Trajets suspects", todo: "Trajets à valider", ok: "Trajets validés" }[histStatus], hDay && `Trajets du ${frDate(hDay)}`, q.length && `Recherche « ${esc($("#hSearch").value.trim())} »`].filter(Boolean);
+  $("#trips").innerHTML = (notes.length ? `<div class="filter-note">${notes.join(" · ")} : ${list.length} · <button type="button" class="linkbtn" id="stfClear">Afficher tous les trajets</button></div>` : "")
     + (list.length ? list.map(t => { const v = vehicles.find(x => x.id === t.vehId), st = statusOf(t, sus);
     const act = st === "todo" ? `<button class="btn ghost mini" data-val="${t.id}" type="button">Valider</button>`
       : st === "ok" ? `<button class="btn danger" data-unval="${t.id}" type="button">Annuler validation</button>`
       : `<button class="btn ghost mini" data-goarb type="button">Arbitrer</button>`;
-    return `<div class="trip${st === "bad" ? " bad" : ""}"><div class="r">${STATUS[st]} ${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
+    return `<div class="trip${st === "bad" ? " bad" : ""}" data-id="${t.id}"><div class="r">${STATUS[st]} ${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
       <div class="m">${new Date(t.date).toLocaleDateString("fr-FR")} · ${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${vehPicker(t, v)}${t.motif ? " · " + esc(t.motif) : ""}</div>
-      <div class="m" style="text-align:right">${eur(tripAmount(t))} ${act} ${t.validated ? `<span class="sub" title="Annulez la validation pour pouvoir supprimer">🔒</span>` : `<button class="btn danger" data-del="${t.id}" type="button">Suppr.</button>`}</div></div>`; }).join("")
+      <div class="m" style="text-align:right">${eur(tripAmount(t))} ${act} ${t.validated ? `<span class="sub" title="Annulez la validation pour pouvoir supprimer">🔒</span>` : `<button class="btn ghost mini" data-edit="${t.id}" type="button">Modifier</button> <button class="btn danger" data-del="${t.id}" type="button">Suppr.</button>`}</div></div>`; }).join("")
     : `<p class="sub">Aucun trajet pour cette sélection.</p>`);
-  if ($("#stfClear")) $("#stfClear").onclick = () => { histStatus = ""; renderHist(); };
-  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
-    if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer"; b.dataset.confirm = "1"; return; }
-    const id = b.dataset.del; if (trips.some(t => t.id === id && t.validated)){ toast("Trajet validé : annulez la validation avant de le supprimer.", true); return; }
-    trips = trips.filter(t => t.id !== id); saveAll(); renderHist(); sync.delTrip(id);
-  });
+  if ($("#stfClear")) $("#stfClear").onclick = () => { histStatus = ""; hDay = ""; $("#hSearch").value = ""; renderHist(); };
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => deleteTrips(trips.filter(t => t.id === b.dataset.del), "Trajet supprimé."));
+  document.querySelectorAll("[data-edit]").forEach(b => b.onclick = () => openEdit(b.dataset.edit));
+  document.querySelectorAll("#trips .trip[data-id]").forEach(enableSwipe);
   document.querySelectorAll("select[data-move]").forEach(sel => sel.onchange = () => moveTrips(trips.filter(t => t.id === sel.dataset.move), sel.value));
   document.querySelectorAll("[data-val]").forEach(b => b.onclick = () => setValidated(trips.filter(t => t.id === b.dataset.val), true));
   document.querySelectorAll("[data-unval]").forEach(b => b.onclick = () => setValidated(trips.filter(t => t.id === b.dataset.unval), false));
@@ -815,13 +951,17 @@ let histStatus = ""; // filtre de statut de l'Historique : "", "bad", "todo" ou 
 const STATUS = { ok: `<span class="pill st-ok">Validé</span>`, todo: `<span class="pill st-todo">À valider</span>`, bad: `<span class="pill st-bad">Suspect</span>` };
 function suspectIds(){ const s = new Set(); arbGroups().forEach(g => g.list.forEach(t => s.add(t.id))); return s; }
 function statusOf(t, sus){ return (sus || suspectIds()).has(t.id) ? "bad" : t.validated ? "ok" : "todo"; }
-async function setValidated(list, val){
-  if (!list.length) return;
+async function setValidated(list, val, quiet){
+  if (!list.length) return false;
   const ids = list.map(t => t.id);
   for (let i = 0; i < ids.length; i += 200)
-    if (session && !(await remote(sb && session && sb.from("fk_trips").update({ validated: val }).in("id", ids.slice(i, i + 200))))) return;
-  list.forEach(t => t.validated = val); saveAll(); renderHist();
-  toast(val ? `${list.length} trajet(s) validé(s).` : "Validation annulée.");
+    if (session && !(await remote(sb && session && sb.from("fk_trips").update({ validated: val }).in("id", ids.slice(i, i + 200))))) return false;
+  list.forEach(t => t.validated = val); saveAll(); rerender();
+  if (!quiet){
+    if (val) toastUndo(`${list.length} trajet(s) validé(s).`, async () => { await setValidated(list, false, true); toast("Validation annulée."); });
+    else toast("Validation annulée.");
+  }
+  return true;
 }
 const short = s => (s || "—").split(",").slice(0, 2).join(",");
 
@@ -920,17 +1060,11 @@ function renderArb(){
     $("#selNone").onclick = () => { arbSel.clear(); renderArb(); };
     $("#selDel").onclick = async e => { const b = e.currentTarget;
       if (b.dataset.confirm !== "1"){ b.dataset.confirm = "1"; b.textContent = `Confirmer : supprimer ${sel.length} trajet(s)`; return; }
-      b.disabled = true; const ids = sel.map(t => t.id);
-      for (let i = 0; i < ids.length; i += 200)
-        if (!(await remote(sb && session && sb.from("fk_trips").delete().in("id", ids.slice(i, i + 200))))){ b.disabled = false; return; }
-      const del = new Set(ids); trips = trips.filter(t => !del.has(t.id)); arbSel.clear(); saveAll(); renderArb(); toast(`${ids.length} trajet(s) supprimé(s).`);
+      b.disabled = true; arbSel.clear();
+      if (!(await deleteTrips(sel, `${sel.length} trajet(s) supprimé(s).`))) b.disabled = false;
     };
   }
-  document.querySelectorAll("[data-arb-del]").forEach(b => b.onclick = async () => {
-    if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer la suppression"; b.dataset.confirm = "1"; return; }
-    const id = b.dataset.arbDel; if (trips.some(t => t.id === id && t.validated)) return;
-    trips = trips.filter(t => t.id !== id); arbSel.delete(id); saveAll(); renderArb(); await sync.delTrip(id);
-  });
+  document.querySelectorAll("[data-arb-del]").forEach(b => b.onclick = () => { arbSel.delete(b.dataset.arbDel); deleteTrips(trips.filter(t => t.id === b.dataset.arbDel), "Trajet supprimé."); });
   document.querySelectorAll("[data-arb-ok]").forEach(b => b.onclick = async () => {
     const list = trips.filter(t => t.date === b.dataset.arbOk), ids = list.map(t => t.id);
     if (session && !(await remote(sb && session && sb.from("fk_trips").update({ same_day_ok: true }).in("id", ids)))) return;
@@ -1092,6 +1226,334 @@ $("#barApply").onclick = () => {
 };
 $("#barReset").onclick = () => { bareme = BAREME_DEFAUT; LS.set("bareme", null); sync.settings(); renderBareme(); $("#barMsg").textContent = "Barème intégré rétabli."; };
 
+/* ===== Outils communs ===== */
+const frDate = d => new Date(d + "T12:00:00").toLocaleDateString("fr-FR");
+const currentTab = () => (document.querySelector("nav button.on") || { dataset: {} }).dataset.go;
+const goTab = name => document.querySelector(`nav button[data-go="${name}"]`).click();
+function rerender(){ const tab = currentTab(); if (tab === "hist") renderHist(); if (tab === "arb") renderArb(); if (tab === "home") renderHome(); updateArbBadge(); }
+
+/* ===== Annuler pendant 6 s ===== */
+function toastUndo(msg, undo){
+  const t = $("#toast"); t.className = "toast"; t.hidden = false;
+  t.innerHTML = `<span>${esc(msg)}</span><button type="button" class="toast-undo">Annuler</button>`;
+  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 6000);
+  t.querySelector(".toast-undo").onclick = async () => { t.hidden = true; clearTimeout(toastT); await undo(); };
+}
+async function deleteTrips(list, label){
+  const locked = list.filter(t => t.validated).length; list = list.filter(t => !t.validated);
+  if (!list.length){ if (locked) toast("Trajet validé : annulez la validation pour pouvoir le supprimer.", true); return false; }
+  const ids = list.map(t => t.id);
+  for (let i = 0; i < ids.length; i += 200)
+    if (!(await remote(sb && session && sb.from("fk_trips").delete().in("id", ids.slice(i, i + 200))))) return false;
+  const del = new Set(ids); trips = trips.filter(t => !del.has(t.id)); saveAll(); rerender();
+  toastUndo(label || `${list.length} trajet(s) supprimé(s).`, async () => {
+    try{ await insertTrips(list.map(t => ({ ...t }))); rerender(); toast("Suppression annulée."); }catch(e){ toast("Restauration impossible.", true); }
+  });
+  return true;
+}
+
+/* ===== Modifier un trajet (non validé) ===== */
+function openEdit(id){
+  const t = trips.find(x => x.id === id); if (!t || t.validated) return;
+  $("#eDate").value = t.date; $("#eFrom").value = t.from || ""; $("#eTo").value = t.to || ""; $("#eMotif").value = t.motif || "";
+  $("#eKm").value = String(t.kmOne).replace(".", ","); $("#eAR").checked = !!t.roundTrip; $("#eMsg").textContent = "";
+  $("#eVeh").innerHTML = vehicles.map(v => `<option value="${v.id}" ${v.id === t.vehId ? "selected" : ""}>${esc(v.name)} — ${v.cv} CV</option>`).join("");
+  $("#editDlg").dataset.id = id; $("#editDlg").showModal();
+}
+$("#eCancel").onclick = () => $("#editDlg").close();
+$("#editForm").onsubmit = async e => {
+  e.preventDefault();
+  const d = $("#editDlg"), t = trips.find(x => x.id === d.dataset.id); if (!t){ d.close(); return; }
+  const km1 = num($("#eKm").value); if (km1 <= 0){ $("#eMsg").textContent = "Indiquez une distance aller supérieure à 0."; return; }
+  const before = { ...t }, upd = { ...t, date: $("#eDate").value || t.date, from: $("#eFrom").value.trim(), to: $("#eTo").value.trim(),
+    motif: $("#eMotif").value.trim(), kmOne: Math.round(km1 * 10) / 10, roundTrip: $("#eAR").checked, vehId: $("#eVeh").value };
+  upd.km = Math.round(upd.kmOne * (upd.roundTrip ? 2 : 1) * 10) / 10;
+  if (!(await remote(sb && session && sb.from("fk_trips").upsert(toDbTrip(upd))))){ $("#eMsg").textContent = "Enregistrement impossible : " + lastDbError; return; }
+  Object.assign(t, upd); saveAll(); d.close(); rerender();
+  toastUndo("Trajet modifié.", async () => { if (await remote(sb && session && sb.from("fk_trips").upsert(toDbTrip(before)))){ Object.assign(t, before); saveAll(); rerender(); toast("Modification annulée."); } });
+};
+setupAC("eFrom"); setupAC("eTo");
+
+/* ===== Trajets favoris (stockés avec les réglages du compte) ===== */
+const favs = () => (places.favs = places.favs || []);
+const favLabel = f => f.name || `${short(f.from)} → ${short(f.to)}`;
+const favKm = f => Math.round(f.kmOne * (f.roundTrip ? 2 : 1) * 10) / 10;
+function setTripType(f){ factor = f; document.querySelectorAll("#segTrip button").forEach(x => x.classList.toggle("on", +x.dataset.v === factor)); }
+function loadFav(f){
+  setPlace("from", f.from); setPlace("to", f.to); $("#motif").value = f.motif || ""; setTripType(f.roundTrip ? 2 : 1);
+  if (vehicles.some(v => v.id === f.vehId)) $("#veh").value = f.vehId;
+  routes = []; $("#map").hidden = true; $("#resPanel").hidden = false; $("#kmOne").value = f.kmOne; $("#calcMsg").textContent = "";
+  $("#routes").innerHTML = `<div class="memo">★ Favori « ${esc(favLabel(f))} » : ${fmt(f.kmOne)} km aller.</div>`; updateTotal();
+}
+async function saveSettings(){ LS.set("places", places); await sync.settings(); }
+function renderFavs(){
+  const list = favs();
+  $("#favBar").innerHTML = list.map(f => `<button type="button" class="fav" data-fav="${f.id}"><b>★ ${esc(favLabel(f))}</b><span>${f.roundTrip ? "Aller-retour" : "Aller simple"} · ${fmt(favKm(f))} km</span></button>`).join("");
+  $("#favBar").querySelectorAll("[data-fav]").forEach(b => b.onclick = () => { loadFav(favs().find(f => f.id === b.dataset.fav)); $("#resPanel").scrollIntoView({ behavior: "smooth", block: "start" }); });
+  $("#favList").innerHTML = list.length ? list.map(f => `<div class="trip"><div class="r">★ ${esc(favLabel(f))}</div><div class="k">${fmt(favKm(f))} km</div>
+      <div class="m">${esc(short(f.from))} → ${esc(short(f.to))} · ${f.roundTrip ? "Aller-retour" : "Aller simple"}${f.motif ? " · " + esc(f.motif) : ""}</div>
+      <div class="m" style="text-align:right"><button class="btn danger" data-favdel="${f.id}" type="button">Supprimer</button></div></div>`).join("")
+    : `<p class="sub" style="margin:0">Aucun favori. Après le calcul d'un trajet, cliquez sur « ★ Ajouter aux favoris ».</p>`;
+  $("#favList").querySelectorAll("[data-favdel]").forEach(b => b.onclick = async () => {
+    const f = favs().find(x => x.id === b.dataset.favdel); places.favs = favs().filter(x => x !== f); await saveSettings(); renderFavs(); rerender();
+    toastUndo(`Favori « ${favLabel(f)} » supprimé.`, async () => { favs().push(f); await saveSettings(); renderFavs(); rerender(); });
+  });
+}
+$("#favAdd").onclick = async () => {
+  const kmOne = num($("#kmOne").value);
+  if (kmOne <= 0){ toast("Calculez ou saisissez d'abord la distance aller.", true); return; }
+  const name = $("#favName").value.trim() || `${short($("#from").value)} → ${short($("#to").value)}`;
+  favs().push({ id: uid(), name, from: $("#from").value, to: $("#to").value, kmOne: Math.round(kmOne * 10) / 10, roundTrip: factor === 2, vehId: $("#veh").value, motif: $("#motif").value.trim() });
+  await saveSettings(); $("#favName").value = ""; renderFavs(); toast(`Favori « ${name} » enregistré.`);
+};
+/* Saisie en un clic depuis l'accueil */
+async function quickFav(f, date){
+  date = date || today();
+  if (!vehicles.some(v => v.id === f.vehId) || trips.some(t => t.date === date)){
+    goTab("new"); document.querySelector('#segDate button[data-v="one"]').click(); $("#date").value = date; loadFav(f);
+    if (trips.some(t => t.date === date)) toast("Un trajet existe déjà ce jour : vérifiez puis enregistrez.", true);
+    return;
+  }
+  const t = { id: uid(), date, from: f.from, to: f.to, motif: f.motif || "", kmOne: f.kmOne, roundTrip: !!f.roundTrip, km: favKm(f), vehId: f.vehId };
+  try{ await insertTrips([t]); }catch(e){ toast("Enregistrement impossible : " + e.message, true); return; }
+  rerender(); toastUndo(`Trajet du ${frDate(date)} enregistré : ${fmt(t.km)} km.`, () => deleteTrips([t], "Trajet retiré."));
+}
+function favForDays(f, dates){
+  goTab("new"); loadFav(f); document.querySelector('#segDate button[data-v="multi"]').click();
+  selDates = new Set(dates); if (dates.length){ const d = new Date(dates[0] + "T12:00:00"); calMonth = new Date(d.getFullYear(), d.getMonth(), 1); }
+  renderCal(); $("#cal").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ===== Identité sur les relevés ===== */
+function renderMe(){ const me = places.me || {}; $("#meName").value = me.name || ""; $("#meCompany").value = me.company || ""; $("#meAddress").value = me.address || ""; }
+$("#meSave").onclick = async () => { places.me = { name: $("#meName").value.trim(), company: $("#meCompany").value.trim(), address: $("#meAddress").value.trim() }; await saveSettings(); toast("Identité enregistrée."); };
+
+/* ===== Jours ouvrés sans trajet ===== */
+function workdaysWithout(from, to){
+  const out = [], busy = new Set(trips.map(t => t.date));
+  for (let d = new Date(from + "T12:00:00"); ymd(d) <= to; d.setDate(d.getDate() + 1)){
+    const ds = ymd(d), wd = (d.getDay() + 6) % 7;
+    if (wd < 5 && !holidaysOf(d.getFullYear())[ds] && !busy.has(ds)) out.push(ds);
+  }
+  return out;
+}
+const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+const monthLabel = m => `${MONTHS[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}`;
+const dayShort = d => new Date(d + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" });
+
+/* ===== Accueil ===== */
+function renderHome(){
+  const td = today(), y = td.slice(0, 4), m = td.slice(0, 7), sus = suspectIds(), me = places.me || {};
+  const h = new Date().getHours();
+  $("#hTitle").textContent = (h < 18 ? "Bonjour" : "Bonsoir") + (me.name ? " " + me.name.split(" ")[0] : "");
+  $("#hSub").textContent = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  // Saisie rapide : favoris, sinon itinéraire par défaut
+  const list = favs();
+  $("#homeFavs").innerHTML = list.length ? list.map(f => `<div class="fav-card"><b>★ ${esc(favLabel(f))}</b>
+      <span class="sub">${f.roundTrip ? "Aller-retour" : "Aller simple"} · ${fmt(favKm(f))} km</span>
+      <div class="row"><button class="btn" data-qf="${f.id}" type="button">+ Aujourd'hui</button><button class="btn ghost" data-qd="${f.id}" type="button">Choisir les jours</button></div></div>`).join("")
+    : `<div class="memo">Ajoutez vos trajets habituels en favoris : calculez un trajet dans l'onglet Trajet, puis « ★ Ajouter aux favoris ». Ils apparaîtront ici pour une saisie en un clic.
+       <div style="margin-top:8px"><button class="btn" type="button" id="goNew">Saisir un trajet</button></div></div>`;
+  $("#homeFavs").querySelectorAll("[data-qf]").forEach(b => b.onclick = () => quickFav(favs().find(f => f.id === b.dataset.qf)));
+  $("#homeFavs").querySelectorAll("[data-qd]").forEach(b => b.onclick = () => favForDays(favs().find(f => f.id === b.dataset.qd), []));
+  if ($("#goNew")) $("#goNew").onclick = () => goTab("new");
+  // Alertes : à valider, suspects, jours ouvrés sans trajet cette semaine
+  const todo = trips.filter(t => statusOf(t, sus) === "todo"), bad = arbGroups().length;
+  const mon = new Date(td + "T12:00:00"); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+  const missing = workdaysWithout(ymd(mon), td);
+  const alerts = [];
+  if (missing.length) alerts.push(`<div class="alert info"><span>📅 <b>${missing.length} jour(s) ouvré(s) sans trajet</b> cette semaine : ${missing.map(dayShort).join(", ")}.</span>
+    ${list.length ? `<button class="btn" type="button" id="fillMissing">Saisir ${list.length > 1 ? "ces jours" : `« ${esc(favLabel(list[0]))} »`}</button>` : ""}</div>`);
+  if (bad) alerts.push(`<div class="alert bad"><span>⚖ <b>${bad} jour(s) suspect(s)</b> à arbitrer (plusieurs trajets le même jour).</span><button class="btn ghost" type="button" data-go2="arb">Arbitrer</button></div>`);
+  if (todo.length) alerts.push(`<div class="alert todo"><span>● <b>${todo.length} trajet(s) à valider</b>.</span><button class="btn ghost" type="button" data-go2="todo">Voir</button></div>`);
+  $("#homeAlerts").innerHTML = alerts.join("");
+  $("#homeAlerts").querySelectorAll("[data-go2]").forEach(b => b.onclick = () => {
+    if (b.dataset.go2 === "arb") return goTab("arb");
+    histStatus = "todo"; $("#fYear").value = ""; goTab("hist"); $("#tripsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  if ($("#fillMissing")) $("#fillMissing").onclick = () => favForDays(list[0], missing);
+  // Mois en cours
+  const mt = trips.filter(t => t.date.startsWith(m)), mKm = mt.reduce((a, t) => a + t.km, 0), mEur = mt.reduce((a, t) => a + tripAmount(t), 0);
+  const mOk = mt.filter(t => t.validated).length;
+  $("#homeMonthTitle").textContent = "Ce mois-ci : " + monthLabel(m);
+  $("#homeStats").innerHTML = `<div class="stat"><div class="l">Kilomètres</div><div class="v">${fmt(mKm, 0)} km</div></div>
+    <div class="stat"><div class="l">Indemnités estimées</div><div class="v">${eur(mEur)}</div></div>
+    <div class="stat link" id="homeTrips" title="Voir dans l'historique"><div class="l">Trajets</div><div class="v">${mt.length}</div><div class="sub">${mOk} validé(s) · ${mt.length - mOk} à traiter</div></div>`;
+  $("#homeTrips").onclick = () => { $("#fYear").value = y; goTab("hist"); };
+  // Tranches du barème par véhicule
+  const vy = vehicles.map(v => ({ v, d: tripsOf(y, v.id).reduce((a, t) => a + t.km, 0) })).filter(x => x.d);
+  $("#homeTranche").innerHTML = vy.length ? vy.map(({ v, d }) => {
+    const t = (v.elec ? bareme.electrique : bareme.voiture)[cvKey(v.cv)], tier = d <= 5000 ? 1 : d <= 20000 ? 2 : 3;
+    const pct = tier === 1 ? d / 5000 : tier === 2 ? (d - 5000) / 15000 : 1, next = tier === 1 ? 5000 - d : tier === 2 ? 20000 - d : 0;
+    const f = tier === 1 ? `d × ${t[0]}` : tier === 2 ? `(d × ${t[1]}) + ${t[2]}` : `d × ${t[3]}`;
+    const msg = tier === 1 ? `Encore ${fmt(next, 0)} km avant la tranche 5 001 – 20 000 km, où le barème devient (d × ${t[1]}) + ${t[2]} €.`
+      : tier === 2 ? `Encore ${fmt(next, 0)} km avant la tranche au-delà de 20 000 km (d × ${t[3]}).` : "Dernière tranche du barème atteinte.";
+    return `<div class="tranche"><div class="hello"><b>${esc(v.name)} · ${v.cv} CV${v.elec ? " · électrique" : ""}</b><span class="sub">${fmt(d, 0)} km en ${y} · ${eur(annualAmount(d, v))} (${fmt(annualAmount(d, v) / d, 3)} €/km)</span></div>
+      <div class="tbar t${tier}" role="img" aria-label="Progression dans la tranche ${tier}"><i style="width:${Math.min(100, pct * 100).toFixed(1)}%"></i></div>
+      <div class="tticks"><span>${tier === 1 ? "0" : tier === 2 ? "5 000" : "20 000"} km</span><span>Tranche ${tier} : ${f}</span><span>${tier === 1 ? "5 000" : tier === 2 ? "20 000" : "∞"} km</span></div>
+      <div class="sub">${msg}</div></div>`; }).join("")
+    : `<p class="sub" style="margin:0">Aucun trajet en ${y} pour l'instant.</p>`;
+  // Clôture : 3 derniers mois ayant des trajets
+  const months = [...new Set(trips.map(t => t.date.slice(0, 7)))].filter(x => x <= m).sort().reverse().slice(0, 3);
+  $("#homeClose").innerHTML = months.length ? months.map(mm => {
+    const l = trips.filter(t => t.date.startsWith(mm)), nb = l.filter(t => sus.has(t.id)).length, nt = l.filter(t => !t.validated && !sus.has(t.id)).length;
+    const km = l.reduce((a, t) => a + t.km, 0);
+    const state = nb ? `<button class="btn ghost" type="button" data-go2c="arb">⚠ ${nb} suspect(s) : arbitrer</button>`
+      : nt ? `<button class="btn" type="button" data-close="${mm}">Clôturer (${nt} à valider)</button>`
+      : `<span class="pill st-ok">Clôturé</span><button class="btn ghost mini" type="button" data-rep="${mm}">Relevé PDF</button>`;
+    return `<div class="close-row"><span><b>${monthLabel(mm)}</b><br><span class="sub">${l.length} trajet(s) · ${fmt(km, 0)} km</span></span><span style="display:flex;gap:8px;align-items:center">${state}</span></div>`; }).join("")
+    : `<p class="sub" style="margin:0">Aucun mois à clôturer.</p>`;
+  $("#homeClose").querySelectorAll("[data-go2c]").forEach(b => b.onclick = () => goTab("arb"));
+  $("#homeClose").querySelectorAll("[data-close]").forEach(b => b.onclick = async () => {
+    if (b.dataset.confirm !== "1"){ b.dataset.confirm = "1"; b.textContent = "Confirmer la clôture"; return; }
+    b.disabled = true; await closeMonth(b.dataset.close);
+  });
+  $("#homeClose").querySelectorAll("[data-rep]").forEach(b => b.onclick = () => reportMonth(b.dataset.rep, true));
+}
+async function closeMonth(mm){
+  const sus = suspectIds(), l = trips.filter(t => t.date.startsWith(mm) && !t.validated && !sus.has(t.id));
+  if (l.length && !(await setValidated(l, true, true))) return;
+  toast(`${monthLabel(mm)} clôturé : ${l.length} trajet(s) validé(s). Génération du relevé…`);
+  await reportMonth(mm, true);
+}
+const reportMonth = (mm, onlyOk) => generateReport({ from: mm + "-01", to: mm + "-31", label: monthLabel(mm), file: mm, vehId: "", onlyOk });
+
+/* ===== Historique : vue calendrier ===== */
+let hView = "list", hDay = "", hMonth = "";
+document.querySelectorAll("#hView button").forEach(b => b.onclick = () => {
+  hView = b.dataset.v; document.querySelectorAll("#hView button").forEach(x => x.classList.toggle("on", x === b));
+  if (hView === "list") hDay = ""; renderHist();
+});
+let hSearchT; $("#hSearch").oninput = () => { clearTimeout(hSearchT); hSearchT = setTimeout(renderHist, 200); };
+function renderHCal(year, all, sus){
+  const box = $("#hCal"); box.hidden = hView !== "cal"; if (box.hidden) return;
+  if (!hMonth || !hMonth.startsWith(year)){ const last = all.map(t => t.date).sort().pop(); hMonth = (last || today()).slice(0, 7); if (!hMonth.startsWith(year)) hMonth = year + "-01"; }
+  const yy = +hMonth.slice(0, 4), mm = +hMonth.slice(5, 7) - 1, first = (new Date(yy, mm, 1).getDay() + 6) % 7, nb = new Date(yy, mm + 1, 0).getDate(), hol = holidaysOf(yy);
+  const byDay = {}; all.forEach(t => (byDay[t.date] = byDay[t.date] || []).push(t));
+  let g = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"].map(w => `<div class="wd">${w}</div>`).join("") + "<div></div>".repeat(first);
+  for (let d = 1; d <= nb; d++){
+    const ds = ymd(new Date(yy, mm, d)), wd = (first + d - 1) % 7, l = byDay[ds] || [];
+    const km = l.reduce((a, t) => a + t.km, 0), cls = ["hday", wd > 4 ? "we" : "", hol[ds] ? "hol" : "", hDay === ds ? "on" : ""].join(" ");
+    g += `<button type="button" class="${cls}" data-hd="${ds}" title="${hol[ds] ? esc("Férié : " + hol[ds]) : l.length ? l.length + " trajet(s)" : "Aucun trajet"}">
+      <span>${d}</span><span class="dots">${l.map(t => `<i class="${statusOf(t, sus)}"></i>`).join("")}</span><small>${km ? fmt(km, 0) + " km" : ""}</small></button>`;
+  }
+  box.innerHTML = `<div class="cal-head"><button class="btn ghost mini" type="button" id="hPrev" aria-label="Mois précédent">‹</button><b style="text-transform:capitalize">${monthLabel(hMonth)}</b><button class="btn ghost mini" type="button" id="hNext" aria-label="Mois suivant">›</button></div>
+    <div class="hcal-grid">${g}</div>`;
+  const shift = n => { const d = new Date(yy, mm + n, 1); hMonth = ymd(d).slice(0, 7); hDay = ""; if (String(d.getFullYear()) !== year) $("#fYear").value = String(d.getFullYear()); renderHist(); };
+  $("#hPrev").onclick = () => shift(-1); $("#hNext").onclick = () => shift(1);
+  box.querySelectorAll("[data-hd]").forEach(b => b.onclick = () => { hDay = hDay === b.dataset.hd ? "" : b.dataset.hd; renderHist(); });
+}
+
+/* ===== Glisser (mobile) : → valider, ← supprimer ===== */
+function enableSwipe(row){
+  let x0 = null, y0 = 0, dx = 0;
+  row.addEventListener("touchstart", e => { if (e.target.closest("button,select,input")) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = 0; row.style.transition = "none"; }, { passive: true });
+  row.addEventListener("touchmove", e => {
+    if (x0 === null) return; dx = e.touches[0].clientX - x0; const dy = e.touches[0].clientY - y0;
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dx) < 12){ x0 = null; row.style.transform = ""; row.style.transition = ""; return; }
+    row.style.transform = `translateX(${Math.max(-120, Math.min(120, dx))}px)`; row.classList.toggle("sw-ok", dx > 60); row.classList.toggle("sw-del", dx < -60);
+  }, { passive: true });
+  row.addEventListener("touchend", () => {
+    if (x0 === null) return; x0 = null; row.style.transition = ""; row.style.transform = ""; row.classList.remove("sw-ok", "sw-del");
+    const t = trips.find(x => x.id === row.dataset.id); if (!t) return;
+    if (dx > 80){ if (statusOf(t) === "todo") setValidated([t], true); else if (statusOf(t) === "bad") toast("Trajet suspect : arbitrez-le d'abord.", true); }
+    else if (dx < -80) deleteTrips([t], "Trajet supprimé.");
+  });
+}
+
+/* ===== Relevé PDF ===== */
+let pdfLibs = null;
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("chargement impossible : " + src)); document.head.appendChild(s); }); }
+function loadPdfLibs(){
+  return pdfLibs || (pdfLibs = loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js")
+    .then(() => loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"))
+    .catch(e => { pdfLibs = null; throw e; }));
+}
+async function logoData(){
+  try{ const b = await (await fetch("logo.png")).blob(); return await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); }); }catch(e){ return null; }
+}
+/* Texte compatible avec les polices standard du PDF (espaces fines, flèches) */
+const P = v => String(v ?? "").replace(/[  ]/g, " ").replace(/→/g, "-").replace(/[–—]/g, "-").replace(/[⇄⇅]/g, "<>").replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/[^\x00-\xff€]/g, "");
+const eurP = n => P(eur(n)), kmP = n => P(fmt(n)) + " km";
+async function generateReport(o){
+  try{
+    await loadPdfLibs();
+    const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: "mm", format: "a4" }), me = places.me || {}, W = 210;
+    const inPeriod = t => t.date >= o.from && t.date <= o.to && (!o.vehId || t.vehId === o.vehId);
+    const list = trips.filter(t => inPeriod(t) && (!o.onlyOk || t.validated)).sort((a, b) => a.date.localeCompare(b.date));
+    if (!list.length){ toast("Aucun trajet " + (o.onlyOk ? "validé " : "") + "sur cette période.", true); return false; }
+    const logo = await logoData();
+    if (logo) doc.addImage(logo, "PNG", 14, 10, 36, 26);
+    doc.setFont("helvetica", "bold"); doc.setFontSize(17); doc.setTextColor(31, 35, 40);
+    doc.text(P("Relevé de frais kilométriques"), W - 14, 18, { align: "right" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(10.5); doc.setTextColor(93, 102, 112);
+    doc.text(P(`Période : ${o.label}`), W - 14, 25, { align: "right" });
+    doc.text(P(`Édité le ${new Date().toLocaleDateString("fr-FR")}`), W - 14, 30.5, { align: "right" });
+    let y = 44; doc.setTextColor(31, 35, 40); doc.setFontSize(10.5);
+    const idLines = [me.name && `Bénéficiaire : ${me.name}`, me.company && `Société : ${me.company}`, me.address && `Adresse : ${me.address}`,
+      session && `Compte : ${session.user.email}`].filter(Boolean);
+    idLines.forEach(l => { doc.text(P(l), 14, y); y += 5.5; });
+    if (!me.name) { doc.setTextColor(181, 84, 28); doc.text(P("Renseignez votre identité dans Réglages pour la faire figurer ici."), 14, y); y += 5.5; doc.setTextColor(31, 35, 40); }
+    const vname = id => { const v = vehicles.find(x => x.id === id); return v ? `${v.name} (${v.cv} CV)` : "Véhicule supprimé"; };
+    doc.autoTable({ startY: y + 3, head: [["Date", "Itinéraire", "Motif", "Type", "Km", "Véhicule"]],
+      body: list.map(t => [frDate(t.date), P(`${short(t.from)} - ${short(t.to)}`), P(t.motif || ""), t.roundTrip ? "A/R" : "Aller", kmP(t.km), P(vname(t.vehId))]),
+      styles: { font: "helvetica", fontSize: 8.6, cellPadding: 1.8, textColor: [31, 35, 40] },
+      headStyles: { fillColor: [8, 121, 196], textColor: 255, fontStyle: "bold" }, alternateRowStyles: { fillColor: [243, 246, 249] },
+      columnStyles: { 0: { cellWidth: 20 }, 3: { cellWidth: 13 }, 4: { halign: "right", cellWidth: 20 }, 5: { cellWidth: 32 } }, margin: { left: 14, right: 14 } });
+    // Synthèse par véhicule : indemnité de la période = barème(cumul fin) − barème(cumul début), tranches annuelles
+    const yr = o.from.slice(0, 4), rows = []; let tot = 0, totKm = 0;
+    [...new Set(list.map(t => t.vehId))].forEach(id => {
+      const v = vehicles.find(x => x.id === id), base = trips.filter(t => t.vehId === id && t.date.startsWith(yr) && (!o.onlyOk || t.validated));
+      const before = base.filter(t => t.date < o.from).reduce((a, t) => a + t.km, 0), during = list.filter(t => t.vehId === id).reduce((a, t) => a + t.km, 0);
+      const amt = v ? annualAmount(before + during, v) - annualAmount(before, v) : 0, d = before + during, tb = v && (v.elec ? bareme.electrique : bareme.voiture)[cvKey(v.cv)];
+      const f = !tb ? "-" : d <= 5000 ? `d x ${tb[0]}` : d <= 20000 ? `(d x ${tb[1]}) + ${tb[2]}` : `d x ${tb[3]}`;
+      rows.push([P(vname(id)), kmP(during), kmP(d), P(f), eurP(amt)]); tot += amt; totKm += during;
+    });
+    rows.push([{ content: "Total", styles: { fontStyle: "bold" } }, { content: kmP(totKm), styles: { fontStyle: "bold" } }, "", "", { content: eurP(tot), styles: { fontStyle: "bold" } }]);
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 7, head: [["Véhicule", "Km période", P(`Cumul ${yr}`), "Barème appliqué", "Indemnité"]].map(r => r.map(P)), body: rows,
+      styles: { font: "helvetica", fontSize: 9.2, cellPadding: 2 }, headStyles: { fillColor: [31, 35, 40], textColor: 255 },
+      columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 4: { halign: "right" } }, margin: { left: 14, right: 14 } });
+    y = doc.lastAutoTable.finalY + 8; doc.setFontSize(8.6); doc.setTextColor(93, 102, 112);
+    const notes = [`Source du barème : ${bareme.source}.`,
+      "Indemnités calculées par tranche sur le kilométrage annuel cumulé de chaque véhicule ; le montant définitif s'établit sur l'année complète.",
+      !o.onlyOk && list.some(t => !t.validated) ? `Document provisoire : ${list.filter(t => !t.validated).length} trajet(s) non validé(s).` : ""].filter(Boolean);
+    notes.forEach(n => { const lines = doc.splitTextToSize(P(n), W - 28); if (y + lines.length * 4 > 270){ doc.addPage(); y = 20; } doc.text(lines, 14, y); y += lines.length * 4 + 1.5; });
+    if (y > 245){ doc.addPage(); y = 20; }
+    doc.setDrawColor(216, 222, 229); doc.setTextColor(31, 35, 40); doc.setFontSize(10);
+    doc.text(P("Certifié exact,"), 14, y + 8); doc.text(P("Fait à ____________________, le ____ / ____ / ________"), 14, y + 15);
+    doc.roundedRect(W - 84, y + 4, 70, 26, 2, 2); doc.setFontSize(8.5); doc.setTextColor(93, 102, 112); doc.text("Signature", W - 82, y + 9);
+    const n = doc.getNumberOfPages();
+    for (let i = 1; i <= n; i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(140, 147, 156);
+      doc.text(P(`Frais KM - AMN CONSEIL - ${o.label}`), 14, 290); doc.text(`${i} / ${n}`, W - 14, 290, { align: "right" }); }
+    doc.save(`releve-frais-km-${o.file}.pdf`);
+    toast("Relevé PDF généré.");
+    return true;
+  }catch(e){ toast("Relevé impossible : " + e.message, true); return false; }
+}
+/* Dialogue du relevé */
+let repKind = "month";
+function fillRepDlg(){
+  const years = [...new Set(trips.map(t => t.date.slice(0, 4)))].sort().reverse(), y = $("#repYear").value || $("#fYear").value || years[0] || today().slice(0, 4);
+  $("#repYear").innerHTML = (years.length ? years : [y]).map(v => `<option ${v === y ? "selected" : ""}>${v}</option>`).join("");
+  const ms = [...new Set(trips.filter(t => t.date.startsWith($("#repYear").value)).map(t => t.date.slice(0, 7)))].sort().reverse(), cm = $("#repMonth").value;
+  $("#repMonth").innerHTML = ms.map(m => `<option value="${m}" ${m === cm ? "selected" : ""}>${monthLabel(m)}</option>`).join("");
+  $("#repVeh").innerHTML = `<option value="">Tous les véhicules</option>` + vehicles.map(v => `<option value="${v.id}">${esc(v.name)} — ${v.cv} CV</option>`).join("");
+  $("#repMonthWrap").hidden = repKind !== "month"; $("#repMsg").textContent = "";
+  const o = repOpts(), l = trips.filter(t => t.date >= o.from && t.date <= o.to && (!o.vehId || t.vehId === o.vehId)), ok = l.filter(t => t.validated).length;
+  $("#repInfo").textContent = `${l.length} trajet(s) sur la période, dont ${ok} validé(s).`;
+}
+function repOpts(){
+  const y = $("#repYear").value, m = $("#repMonth").value || y + "-01";
+  return repKind === "month" ? { from: m + "-01", to: m + "-31", label: monthLabel(m), file: m, vehId: $("#repVeh").value, onlyOk: $("#repOnlyOk").checked }
+    : { from: y + "-01-01", to: y + "-12-31", label: "année " + y, file: y, vehId: $("#repVeh").value, onlyOk: $("#repOnlyOk").checked };
+}
+$("#repBtn").onclick = () => { fillRepDlg(); $("#repDlg").showModal(); };
+document.querySelectorAll("#repKind button").forEach(b => b.onclick = () => { repKind = b.dataset.v; document.querySelectorAll("#repKind button").forEach(x => x.classList.toggle("on", x === b)); fillRepDlg(); });
+["#repYear", "#repMonth", "#repVeh", "#repOnlyOk"].forEach(id => $(id).onchange = fillRepDlg);
+$("#repCancel").onclick = () => $("#repDlg").close();
+$("#repForm").onsubmit = async e => { e.preventDefault(); $("#repGo").disabled = true; $("#repGo").textContent = "Génération…";
+  const ok = await generateReport(repOpts()); $("#repGo").disabled = false; $("#repGo").textContent = "Générer le PDF"; if (ok) $("#repDlg").close(); };
+
 /* ===== Base de données Supabase (tables fk_*) ===== */
 const SB_URL = "https://jwfcvgkrpevxxuxazhcy.supabase.co";
 const SB_KEY = "sb_publishable_a1XkSjyDqJmqeug31yFccg_CuAyRrNq";
@@ -1120,7 +1582,7 @@ const sync = {
   all: async () => (vehicles.length ? await remote(sb && session && sb.from("fk_vehicles").upsert(vehicles.map(toDbVeh))) : true)
                 && (trips.length ? await remote(sb && session && sb.from("fk_trips").upsert(trips.map(toDbTrip))) : true)
 };
-function renderAll(){ renderVehicles(); renderBareme(); renderChips(); applyDefaults(); updateTotal(); if (!document.querySelector('section[data-tab="hist"]').hidden) renderHist(); }
+function renderAll(){ renderVehicles(); renderBareme(); renderChips(); renderFavs(); renderMe(); applyDefaults(); updateTotal(); rerender(); }
 async function loadRemote(){
   const local = { vehicles: LS.get("vehicles", []), trips: LS.get("trips", []) };
   const [v, t, s] = await Promise.all([
