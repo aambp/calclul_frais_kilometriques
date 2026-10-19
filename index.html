@@ -95,6 +95,20 @@ nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--mu
 .trip.bad{border-left:3px solid var(--st-bad);padding-left:10px}
 .btn.mini{padding:6px 10px;font-size:.85rem}
 .legend{display:flex;flex-wrap:wrap;gap:8px}
+.cal{display:grid;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px}
+.cal-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.cal-head b{font:600 1.15rem var(--f-display);text-transform:capitalize}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.cal-grid .wd{text-align:center;font-size:.7rem;font-weight:600;text-transform:uppercase;color:var(--muted);padding-block:2px}
+.cal-grid button{aspect-ratio:1;max-width:100%;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;font:600 .95rem var(--f-body);cursor:pointer;position:relative;font-variant-numeric:tabular-nums}
+.cal-grid button.off{color:var(--muted);background:none;border-style:dashed}
+.cal-grid button.busy{color:var(--muted);text-decoration:line-through;cursor:not-allowed;background:none}
+.cal-grid button.busy::after{content:"";position:absolute;bottom:4px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--st-todo)}
+.cal-grid button.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.cal-grid button.today{outline:2px solid var(--accent);outline-offset:-3px}
+.cal-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.dot.sel{background:var(--accent)} .dot.busy{background:var(--st-todo);border-radius:50%} .dot.off{border:1px dashed var(--muted)}
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
@@ -124,9 +138,17 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <div class="row"><button class="btn" id="importYes" type="button">Importer dans mon compte</button><button class="btn ghost" id="importNo" type="button">Ignorer</button></div>
   </div>
   <div class="panel">
+    <div class="seg" id="segDate"><button data-v="one" class="on" type="button">Une date</button><button data-v="multi" type="button">Plusieurs dates</button></div>
     <div class="row">
-      <label>Date<input type="date" id="date"></label>
+      <label id="dateWrap">Date<input type="date" id="date"></label>
       <label>Véhicule<select id="veh"></select></label>
+    </div>
+    <div id="cal" class="cal" hidden>
+      <div class="cal-head"><button class="btn ghost mini" id="calPrev" type="button" aria-label="Mois précédent">‹</button><b id="calTitle"></b><button class="btn ghost mini" id="calNext" type="button" aria-label="Mois suivant">›</button></div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend sub"><span><i class="dot sel"></i>sélectionné</span><span><i class="dot busy"></i>déjà un trajet</span><span><i class="dot off"></i>week-end / férié</span></div>
+      <div class="row"><button class="btn ghost mini" id="calWork" type="button">Jours ouvrés du mois</button><button class="btn ghost mini" id="calClear" type="button">Tout effacer</button></div>
+      <div class="msg" id="calInfo"></div>
     </div>
     <label class="ac">Départ<input id="from" autocomplete="off" placeholder="Adresse, ville…"><ul hidden></ul></label>
     <div class="chips" data-for="from"></div>
@@ -227,7 +249,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 12</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 13</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -495,20 +517,23 @@ document.querySelectorAll("#segTrip button").forEach(b => b.onclick = () => {
 $("#kmOne").oninput = updateTotal;
 ["#veh", "#date"].forEach(s => $(s).onchange = updateTotal);
 function updateTotal(){
-  const km = (parseFloat($("#kmOne").value) || 0) * factor;
-  $("#totLbl").textContent = factor === 2 ? "Total aller-retour" : "Total aller simple";
+  const n = dateMode === "multi" ? selDates.size : 1, per = (parseFloat($("#kmOne").value) || 0) * factor, km = per * n;
+  $("#totLbl").textContent = (factor === 2 ? "Aller-retour" : "Aller simple") + (dateMode === "multi" ? ` × ${n} jour(s)` : "");
   $("#kmTot").innerHTML = fmt(km) + "<small>km</small>";
-  $("#eurTot").innerHTML = fmt(marginalAmount(km, $("#veh").value, $("#date").value || today()), 2) + "<small>€</small>";
+  const d0 = dateMode === "multi" ? ([...selDates].sort()[0] || today()) : ($("#date").value || today());
+  $("#eurTot").innerHTML = fmt(marginalAmount(km, $("#veh").value, d0), 2) + "<small>€</small>";
+  $("#save").textContent = dateMode === "multi" ? `Enregistrer ${n} trajet(s)` : "Enregistrer le trajet";
 }
 
 /* ===== Enregistrer ===== */
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => ymd(new Date()); // date locale (pas UTC)
 $("#save").onclick = () => {
   const one = parseFloat(String($("#kmOne").value).replace(",", ".")) || 0, msg = $("#saveMsg");
   if (!vehicles.length || !$("#veh").value){
     msg.innerHTML = `Aucun véhicule. <button class="btn ghost" id="goVeh" type="button" style="padding:6px 10px">Ajouter un véhicule</button>`; msg.className = "msg err";
     $("#goVeh").onclick = () => document.querySelector('nav button[data-go="veh"]').click(); return; }
   if (one <= 0){ msg.textContent = "Distance manquante : saisissez les km aller."; msg.className = "msg err"; return; }
+  if (dateMode === "multi"){ saveMulti(one); return; }
   const trip = { id: uid(), date: $("#date").value || today(), from: $("#from").value, to: $("#to").value, motif: $("#motif").value.trim(),
                kmOne: Math.round(one * 10) / 10, roundTrip: factor === 2, km: Math.round(one * factor * 10) / 10, vehId: $("#veh").value };
   // Règle : un trajet par jour ; un second trajet le même jour demande une validation explicite
@@ -533,6 +558,63 @@ $("#save").onclick = () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
   applyDefaults(); $("#motif").value = ""; $("#resPanel").hidden = true; $("#kmOne").value = "";
 };
+
+/* ===== Saisie sur plusieurs dates ===== */
+let dateMode = "one", selDates = new Set(), calMonth = new Date(); calMonth.setDate(1);
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+/* Jours fériés en France métropolitaine (fixes + dérivés de Pâques) */
+function holidays(y){
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3),
+        h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451),
+        mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1, easter = new Date(y, mo - 1, da);
+  const plus = n => { const x = new Date(easter); x.setDate(x.getDate() + n); return ymd(x); };
+  return new Set([`${y}-01-01`, `${y}-05-01`, `${y}-05-08`, `${y}-07-14`, `${y}-08-15`, `${y}-11-01`, `${y}-11-11`, `${y}-12-25`, plus(1), plus(39), plus(50)]);
+}
+function renderCal(){
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), hol = holidays(y), busy = new Set(trips.map(t => t.date)), td = today();
+  $("#calTitle").textContent = calMonth.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const first = (new Date(y, m, 1).getDay() + 6) % 7, nb = new Date(y, m + 1, 0).getDate();
+  let html = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"].map(w => `<div class="wd">${w}</div>`).join("") + "<div></div>".repeat(first);
+  for (let d = 1; d <= nb; d++){
+    const ds = ymd(new Date(y, m, d)), wd = (first + d - 1) % 7, cls = [];
+    if (busy.has(ds)) cls.push("busy"); else if (wd > 4 || hol.has(ds)) cls.push("off");
+    if (selDates.has(ds)) cls.push("sel"); if (ds === td) cls.push("today");
+    html += `<button type="button" data-d="${ds}" class="${cls.join(" ")}" ${busy.has(ds) ? `disabled title="Un trajet existe déjà ce jour (saisie unitaire pour en ajouter un second)"` : ""} aria-pressed="${selDates.has(ds)}">${d}</button>`;
+  }
+  $("#calGrid").innerHTML = html;
+  $("#calGrid").querySelectorAll("button[data-d]").forEach(b => b.onclick = () => { const d = b.dataset.d; selDates.has(d) ? selDates.delete(d) : selDates.add(d); renderCal(); });
+  const n = selDates.size, sorted = [...selDates].sort();
+  $("#calInfo").textContent = n ? `${n} jour(s) sélectionné(s) : du ${new Date(sorted[0]).toLocaleDateString("fr-FR")} au ${new Date(sorted[n - 1]).toLocaleDateString("fr-FR")}` : "Touchez les jours à enregistrer, ou utilisez « Jours ouvrés du mois ».";
+  updateTotal();
+}
+document.querySelectorAll("#segDate button").forEach(b => b.onclick = () => {
+  dateMode = b.dataset.v; document.querySelectorAll("#segDate button").forEach(x => x.classList.toggle("on", x === b));
+  $("#dateWrap").hidden = dateMode === "multi"; $("#cal").hidden = dateMode !== "multi";
+  if (dateMode === "multi") renderCal(); else updateTotal();
+});
+$("#calPrev").onclick = () => { calMonth.setMonth(calMonth.getMonth() - 1); renderCal(); };
+$("#calNext").onclick = () => { calMonth.setMonth(calMonth.getMonth() + 1); renderCal(); };
+$("#calClear").onclick = () => { selDates.clear(); renderCal(); };
+$("#calWork").onclick = () => {
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), hol = holidays(y), busy = new Set(trips.map(t => t.date)), nb = new Date(y, m + 1, 0).getDate();
+  for (let d = 1; d <= nb; d++){ const dt = new Date(y, m, d), ds = ymd(dt), wd = (dt.getDay() + 6) % 7; if (wd < 5 && !hol.has(ds) && !busy.has(ds)) selDates.add(ds); }
+  renderCal();
+};
+async function saveMulti(one){
+  const msg = $("#saveMsg"), busy = new Set(trips.map(t => t.date)), dates = [...selDates].filter(d => !busy.has(d)).sort();
+  if (!dates.length){ msg.textContent = "Sélectionnez au moins un jour dans le calendrier."; msg.className = "msg err"; return; }
+  const base = { from: $("#from").value, to: $("#to").value, motif: $("#motif").value.trim(), kmOne: Math.round(one * 10) / 10,
+                 roundTrip: factor === 2, km: Math.round(one * factor * 10) / 10, vehId: $("#veh").value };
+  const list = dates.map(date => ({ ...base, id: uid(), date }));
+  $("#save").disabled = true;
+  try{ await insertTrips(list); }
+  catch(err){ msg.textContent = "Enregistrement impossible : " + err.message + (lastDbError ? " — " + lastDbError : "") + "."; msg.className = "msg err"; lastDbError = ""; return; }
+  finally{ $("#save").disabled = false; }
+  msg.textContent = "";
+  $("#calcMsg").textContent = `✓ ${list.length} trajet(s) enregistré(s) : ${fmt(base.km * list.length)} km. À valider dans Historique.`; $("#calcMsg").className = "msg ok";
+  selDates.clear(); renderCal(); window.scrollTo({ top: 0, behavior: "smooth" });
+  applyDefaults(); $("#motif").value = ""; $("#resPanel").hidden = true; $("#kmOne").value = ""; updateTotal();
+}
 
 /* ===== Historique & synthèse annuelle ===== */
 function renderHist(){
