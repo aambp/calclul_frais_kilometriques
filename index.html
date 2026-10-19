@@ -18,13 +18,13 @@
 /* Layout : appli mobile-first, une colonne, onglets en bas façon panneau routier */
 :root{
   --bg:#f3f6f9; --surface:#ffffff; --ink:#1f2328; --muted:#5d6670; --line:#d8dee5;
-  --accent:#0879c4; --accent-ink:#ffffff; --accent-soft:#e1f0fa; --ok:#1f7a4d; --warn:#b5541c;
+  --accent:#0879c4; --accent-ink:#ffffff; --accent-soft:#e1f0fa; --ok:#1f7a4d; --warn:#b5541c; --st-ok:#1f8a4c; --st-todo:#d97706; --st-bad:#c62828;
   --f-display:"Barlow Condensed","Arial Narrow",sans-serif; --f-body:"Barlow",system-ui,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
   --bg:#111418; --surface:#1a1e24; --ink:#e8ecf0; --muted:#9ba5b0; --line:#2c333c;
-  --accent:#3aa9ec; --accent-ink:#06121c; --accent-soft:#132a3a; --ok:#4cc28a; --warn:#e88a55; color-scheme:dark}}
+  --accent:#3aa9ec; --accent-ink:#06121c; --accent-soft:#132a3a; --st-ok:#3fbf76; --st-todo:#f0a440; --st-bad:#f06a5f; --ok:#4cc28a; --warn:#e88a55; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
@@ -89,6 +89,12 @@ nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:
   padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:1100}
 nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--muted);padding:10px 4px;border-radius:8px;cursor:pointer}
 .badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:.7rem;line-height:18px;text-align:center;vertical-align:1px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;border:1.5px solid currentColor;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.st-ok{color:var(--st-ok)} .st-todo{color:var(--st-todo)} .st-bad{color:var(--st-bad)}
+.trip.bad{border-left:3px solid var(--st-bad);padding-left:10px}
+.btn.mini{padding:6px 10px;font-size:.85rem}
+.legend{display:flex;flex-wrap:wrap;gap:8px}
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
@@ -154,6 +160,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
       <label>Véhicule<select id="fVeh"></select></label>
     </div>
     <div class="stats" id="stats"></div>
+    <div id="bulk"></div>
     <div class="scroll" id="annual"></div>
     <div class="row"><button class="btn ghost" id="csv" type="button">Exporter CSV</button><button class="btn ghost" id="backup" type="button">Sauvegarde JSON</button></div>
     <label>Importer des trajets (CSV ou sauvegarde JSON)<input type="file" id="restore" accept=".csv,.json,text/csv,application/json"></label>
@@ -220,7 +227,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 10</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 11</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -517,8 +524,8 @@ $("#save").onclick = () => {
     return;
   }
   if (sameDay.length){ // second trajet confirmé : la journée est validée, elle n'apparaît pas en arbitrage
-    trip.validated = true; sameDay.forEach(t => t.validated = true);
-    if (session) remote(sb.from("fk_trips").update({ validated: true }).in("id", sameDay.map(t => t.id)));
+    trip.sameDayOk = true; sameDay.forEach(t => t.sameDayOk = true);
+    if (session) remote(sb.from("fk_trips").update({ same_day_ok: true }).in("id", sameDay.map(t => t.id)));
   }
   trips.push(trip); saveAll(); sync.trip(trip);
   msg.textContent = "";
@@ -534,23 +541,45 @@ function renderHist(){
   $("#fYear").innerHTML = years.map(y => `<option ${y === cy ? "selected" : ""}>${y}</option>`).join("");
   const vf = $("#fVeh").value, list = tripsOf(cy, vf).sort((a, b) => b.date.localeCompare(a.date));
   const totKm = list.reduce((s, t) => s + t.km, 0), totEur = list.reduce((s, t) => s + tripAmount(t), 0);
+  const sus = suspectIds(), cnt = { ok: 0, todo: 0, bad: 0 }; list.forEach(t => cnt[statusOf(t, sus)]++);
   $("#stats").innerHTML = `<div class="stat"><div class="l">Kilomètres ${cy}</div><div class="v">${fmt(totKm, 0)} km</div></div>
     <div class="stat"><div class="l">Indemnités ${cy}</div><div class="v">${eur(totEur)}</div></div>
-    <div class="stat"><div class="l">Trajets</div><div class="v">${list.length}</div></div>`;
+    <div class="stat"><div class="l">Trajets</div><div class="v">${list.length}</div>
+      <div class="legend" style="margin-top:6px">${cnt.ok ? `<span class="pill st-ok">${cnt.ok} validé(s)</span>` : ""}${cnt.todo ? `<span class="pill st-todo">${cnt.todo} à valider</span>` : ""}${cnt.bad ? `<span class="pill st-bad">${cnt.bad} suspect(s)</span>` : ""}</div></div>`;
+  $("#bulk").innerHTML = cnt.todo ? `<button class="btn" id="validateAll" type="button">Valider les ${cnt.todo} trajet(s) à valider</button>` : "";
+  if (cnt.todo) $("#validateAll").onclick = () => setValidated(list.filter(t => statusOf(t, sus) === "todo"), true);
   const perVeh = vehicles.filter(v => !vf || v.id === vf).map(v => { const d = tripsOf(cy, v.id).reduce((s, t) => s + t.km, 0); return { v, d, a: annualAmount(d, v) }; }).filter(x => x.d);
   $("#annual").innerHTML = perVeh.length ? `<table><thead><tr><th>Véhicule</th><th class="n">Km annuels</th><th class="n">Barème</th><th class="n">Montant</th></tr></thead><tbody>${
     perVeh.map(x => { const t = (x.v.elec ? bareme.electrique : bareme.voiture)[cvKey(x.v.cv)];
       const f = x.d <= 5000 ? `d × ${t[0]}` : x.d <= 20000 ? `d × ${t[1]} + ${t[2]}` : `d × ${t[3]}`;
       return `<tr><td>${esc(x.v.name)}</td><td class="n">${fmt(x.d)}</td><td class="n">${f}</td><td class="n">${eur(x.a)}</td></tr>`; }).join("")}</tbody></table>` : "";
-  $("#trips").innerHTML = list.length ? list.map(t => { const v = vehicles.find(x => x.id === t.vehId);
-    return `<div class="trip"><div class="r">${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
+  $("#trips").innerHTML = list.length ? list.map(t => { const v = vehicles.find(x => x.id === t.vehId), st = statusOf(t, sus);
+    const act = st === "todo" ? `<button class="btn ghost mini" data-val="${t.id}" type="button">Valider</button>`
+      : st === "ok" ? `<button class="btn danger" data-unval="${t.id}" type="button">Annuler validation</button>`
+      : `<button class="btn ghost mini" data-goarb type="button">Arbitrer</button>`;
+    return `<div class="trip${st === "bad" ? " bad" : ""}"><div class="r">${STATUS[st]} ${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
       <div class="m">${new Date(t.date).toLocaleDateString("fr-FR")} · ${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${esc(v ? v.name : "véhicule supprimé")}${t.motif ? " · " + esc(t.motif) : ""}</div>
-      <div class="m" style="text-align:right">${eur(tripAmount(t))} <button class="btn danger" data-del="${t.id}" type="button">Suppr.</button></div></div>`; }).join("")
+      <div class="m" style="text-align:right">${eur(tripAmount(t))} ${act} <button class="btn danger" data-del="${t.id}" type="button">Suppr.</button></div></div>`; }).join("")
     : `<p class="sub">Aucun trajet pour cette sélection.</p>`;
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer"; b.dataset.confirm = "1"; return; }
     const id = b.dataset.del; trips = trips.filter(t => t.id !== id); saveAll(); renderHist(); sync.delTrip(id);
   });
+  document.querySelectorAll("[data-val]").forEach(b => b.onclick = () => setValidated(trips.filter(t => t.id === b.dataset.val), true));
+  document.querySelectorAll("[data-unval]").forEach(b => b.onclick = () => setValidated(trips.filter(t => t.id === b.dataset.unval), false));
+  document.querySelectorAll("[data-goarb]").forEach(b => b.onclick = () => document.querySelector('nav button[data-go="arb"]').click());
+}
+/* Statut d'un trajet : suspect (rouge) si sa journée compte plusieurs trajets non arbitrés, sinon validé (vert) ou à valider (orange) */
+const STATUS = { ok: `<span class="pill st-ok">Validé</span>`, todo: `<span class="pill st-todo">À valider</span>`, bad: `<span class="pill st-bad">Suspect</span>` };
+function suspectIds(){ const s = new Set(); arbGroups().forEach(g => g.list.forEach(t => s.add(t.id))); return s; }
+function statusOf(t, sus){ return (sus || suspectIds()).has(t.id) ? "bad" : t.validated ? "ok" : "todo"; }
+async function setValidated(list, val){
+  if (!list.length) return;
+  const ids = list.map(t => t.id);
+  for (let i = 0; i < ids.length; i += 200)
+    if (session && !(await remote(sb.from("fk_trips").update({ validated: val }).in("id", ids.slice(i, i + 200))))) return;
+  list.forEach(t => t.validated = val); saveAll(); renderHist();
+  toast(val ? `${list.length} trajet(s) validé(s).` : "Validation annulée.");
 }
 const short = s => (s || "—").split(",").slice(0, 2).join(",");
 
@@ -558,7 +587,7 @@ const short = s => (s || "—").split(",").slice(0, 2).join(",");
 function arbGroups(){
   const byDate = {};
   trips.forEach(t => (byDate[t.date] = byDate[t.date] || []).push(t));
-  return Object.entries(byDate).filter(([, l]) => l.length > 1 && l.some(t => !t.validated))
+  return Object.entries(byDate).filter(([, l]) => l.length > 1 && l.some(t => !t.sameDayOk))
     .sort((a, b) => a[0].localeCompare(b[0])).map(([date, list]) => ({ date, list }));
 }
 function updateArbBadge(){
@@ -584,9 +613,9 @@ function renderArb(){
       <h3><span>${new Date(g.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span><span class="tag">${g.list.length} trajets</span></h3>
       ${g.list.map(t => { const v = vehicles.find(x => x.id === t.vehId);
         return `<div class="trip"><div class="r">${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
-          <div class="m">${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${esc(v ? v.name : "véhicule supprimé")}${t.motif ? " · " + esc(t.motif) : ""}${t.validated ? " · validé" : ""}</div>
+          <div class="m">${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${esc(v ? v.name : "véhicule supprimé")}${t.motif ? " · " + esc(t.motif) : ""}</div>
           <div class="m" style="text-align:right"><button class="btn danger" data-arb-del="${t.id}" type="button">Supprimer</button></div></div>`; }).join("")}
-      <button class="btn ghost" data-arb-ok="${g.date}" type="button">Valider : garder les ${g.list.length} trajets</button>
+      <button class="btn ghost" data-arb-ok="${g.date}" type="button">Garder les ${g.list.length} trajets</button>
     </div>`).join("")
     : `<div class="panel"><p class="sub" style="margin:0">✓ Aucun trajet suspect. Chaque jour compte au plus un trajet, ou a été validé.</p></div>`;
   document.querySelectorAll("[data-arb-del]").forEach(b => b.onclick = async () => {
@@ -595,8 +624,8 @@ function renderArb(){
   });
   document.querySelectorAll("[data-arb-ok]").forEach(b => b.onclick = async () => {
     const list = trips.filter(t => t.date === b.dataset.arbOk), ids = list.map(t => t.id);
-    if (session && !(await remote(sb.from("fk_trips").update({ validated: true }).in("id", ids)))) return;
-    list.forEach(t => t.validated = true); saveAll(); renderArb(); toast("Journée validée.");
+    if (session && !(await remote(sb.from("fk_trips").update({ same_day_ok: true }).in("id", ids)))) return;
+    list.forEach(t => t.sameDayOk = true); saveAll(); renderArb(); toast("Journée arbitrée : trajets conservés, à valider dans Historique.");
   });
 }
 $("#fYear").onchange = renderHist; $("#fVeh").onchange = renderHist;
@@ -604,12 +633,25 @@ $("#fYear").onchange = renderHist; $("#fVeh").onchange = renderHist;
 /* ===== Export / sauvegarde ===== */
 function download(name, text, type){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 $("#csv").onclick = () => {
-  const y = $("#fYear").value, vf = $("#fVeh").value;
-  const rows = [["Date", "Départ", "Arrivée", "Motif", "Type", "Km aller", "Km total", "Véhicule", "CV", "Électrique", "Indemnité (€)"]];
-  tripsOf(y, vf).sort((a, b) => a.date.localeCompare(b.date)).forEach(t => { const v = vehicles.find(x => x.id === t.vehId) || {};
-    rows.push([t.date, t.from, t.to, t.motif, t.roundTrip ? "AR" : "Aller", String(t.kmOne).replace(".", ","), String(t.km).replace(".", ","), v.name || "", v.cv || "", v.elec ? "Oui" : "Non", tripAmount(t).toFixed(2).replace(".", ",")]); });
-  download(`frais-km-${y}.csv`, "﻿" + rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
+  const y = $("#fYear").value, vf = $("#fVeh").value, sus = suspectIds(), sel = tripsOf(y, vf);
+  const notOk = sel.filter(t => statusOf(t, sus) !== "ok"), m = $("#impMsg");
+  if (notOk.length){
+    m.innerHTML = `⚠ ${notOk.length} trajet(s) de la sélection ne sont pas validés (${notOk.filter(t => statusOf(t, sus) === "bad").length} suspect(s)).
+      <div class="row" style="margin-top:8px"><button class="btn" id="csvOk" type="button">Exporter les validés seulement</button><button class="btn ghost" id="csvAll" type="button">Tout exporter</button></div>`;
+    m.className = "msg err";
+    $("#csvOk").onclick = () => { m.textContent = ""; exportCsv(y, sel.filter(t => statusOf(t, sus) === "ok")); };
+    $("#csvAll").onclick = () => { m.textContent = ""; exportCsv(y, sel); };
+    return;
+  }
+  exportCsv(y, sel);
 };
+function exportCsv(y, sel){
+  const sus = suspectIds(), LBL = { ok: "Validé", todo: "À valider", bad: "Suspect" };
+  const rows = [["Date", "Départ", "Arrivée", "Motif", "Type", "Km aller", "Km total", "Véhicule", "CV", "Électrique", "Indemnité (€)", "Statut"]];
+  sel.sort((a, b) => a.date.localeCompare(b.date)).forEach(t => { const v = vehicles.find(x => x.id === t.vehId) || {};
+    rows.push([t.date, t.from, t.to, t.motif, t.roundTrip ? "AR" : "Aller", String(t.kmOne).replace(".", ","), String(t.km).replace(".", ","), v.name || "", v.cv || "", v.elec ? "Oui" : "Non", tripAmount(t).toFixed(2).replace(".", ","), LBL[statusOf(t, sus)]]); });
+  download(`frais-km-${y}.csv`, "﻿" + rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
+}
 $("#backup").onclick = () => download(`frais-km-sauvegarde-${today()}.json`, JSON.stringify({ vehicles, trips }, null, 1), "application/json");
 /* ===== Import CSV / JSON ===== */
 const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/�/g, "").toLowerCase().trim();
@@ -750,8 +792,8 @@ let toastT;
 function toast(txt, err){ const t = $("#toast"); t.textContent = txt; t.className = "toast" + (err ? " err" : ""); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, err ? 6000 : 2500); }
 // user_id envoyé explicitement : en envoi groupé, une colonne absente arrive vide au lieu de prendre sa valeur par défaut
 const uidCol = () => session ? { user_id: session.user.id } : {};
-const toDbTrip = t => ({ ...uidCol(), id: t.id, date: t.date, from_addr: t.from || null, to_addr: t.to || null, motif: t.motif || null, km_one: t.kmOne, round_trip: !!t.roundTrip, km: t.km, veh_id: t.vehId || null, validated: !!t.validated });
-const fromDbTrip = r => ({ id: r.id, date: r.date, from: r.from_addr || "", to: r.to_addr || "", motif: r.motif || "", kmOne: +r.km_one, roundTrip: r.round_trip, km: +r.km, vehId: r.veh_id || "", validated: !!r.validated });
+const toDbTrip = t => ({ ...uidCol(), id: t.id, date: t.date, from_addr: t.from || null, to_addr: t.to || null, motif: t.motif || null, km_one: t.kmOne, round_trip: !!t.roundTrip, km: t.km, veh_id: t.vehId || null, validated: !!t.validated, same_day_ok: !!t.sameDayOk });
+const fromDbTrip = r => ({ id: r.id, date: r.date, from: r.from_addr || "", to: r.to_addr || "", motif: r.motif || "", kmOne: +r.km_one, roundTrip: r.round_trip, km: +r.km, vehId: r.veh_id || "", validated: !!r.validated, sameDayOk: !!r.same_day_ok });
 const toDbVeh = v => ({ ...uidCol(), id: v.id, name: v.name, cv: v.cv, elec: !!v.elec, plate: v.plate || null });
 let lastDbError = "";
 async function remote(q){

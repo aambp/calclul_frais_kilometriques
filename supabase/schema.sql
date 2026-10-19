@@ -23,6 +23,7 @@ create table if not exists fk_trips (
   km numeric(9,2) not null,
   veh_id text references fk_vehicles(id) on delete set null,
   validated boolean not null default false,
+  same_day_ok boolean not null default false,
   created_at timestamptz not null default now()
 );
 create index if not exists fk_trips_user_date on fk_trips(user_id, date);
@@ -48,3 +49,5 @@ create policy "fk_settings_own" on fk_settings for all to authenticated using (u
 
 -- Mise à jour d'une base existante (v10 : onglet Arbitrage)
 alter table fk_trips add column if not exists validated boolean not null default false;
+-- v11 : statut validé / à valider / suspect
+alter table fk_trips add column if not exists same_day_ok boolean not null default false;
