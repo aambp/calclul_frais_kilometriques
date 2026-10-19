@@ -227,7 +227,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 11</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 12</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -559,11 +559,12 @@ function renderHist(){
       : `<button class="btn ghost mini" data-goarb type="button">Arbitrer</button>`;
     return `<div class="trip${st === "bad" ? " bad" : ""}"><div class="r">${STATUS[st]} ${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
       <div class="m">${new Date(t.date).toLocaleDateString("fr-FR")} · ${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${esc(v ? v.name : "véhicule supprimé")}${t.motif ? " · " + esc(t.motif) : ""}</div>
-      <div class="m" style="text-align:right">${eur(tripAmount(t))} ${act} <button class="btn danger" data-del="${t.id}" type="button">Suppr.</button></div></div>`; }).join("")
+      <div class="m" style="text-align:right">${eur(tripAmount(t))} ${act} ${t.validated ? `<span class="sub" title="Annulez la validation pour pouvoir supprimer">🔒</span>` : `<button class="btn danger" data-del="${t.id}" type="button">Suppr.</button>`}</div></div>`; }).join("")
     : `<p class="sub">Aucun trajet pour cette sélection.</p>`;
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer"; b.dataset.confirm = "1"; return; }
-    const id = b.dataset.del; trips = trips.filter(t => t.id !== id); saveAll(); renderHist(); sync.delTrip(id);
+    const id = b.dataset.del; if (trips.some(t => t.id === id && t.validated)){ toast("Trajet validé : annulez la validation avant de le supprimer.", true); return; }
+    trips = trips.filter(t => t.id !== id); saveAll(); renderHist(); sync.delTrip(id);
   });
   document.querySelectorAll("[data-val]").forEach(b => b.onclick = () => setValidated(trips.filter(t => t.id === b.dataset.val), true));
   document.querySelectorAll("[data-unval]").forEach(b => b.onclick = () => setValidated(trips.filter(t => t.id === b.dataset.unval), false));
@@ -614,13 +615,14 @@ function renderArb(){
       ${g.list.map(t => { const v = vehicles.find(x => x.id === t.vehId);
         return `<div class="trip"><div class="r">${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
           <div class="m">${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${esc(v ? v.name : "véhicule supprimé")}${t.motif ? " · " + esc(t.motif) : ""}</div>
-          <div class="m" style="text-align:right"><button class="btn danger" data-arb-del="${t.id}" type="button">Supprimer</button></div></div>`; }).join("")}
+          <div class="m" style="text-align:right">${t.validated ? `<span class="pill st-ok">Validé 🔒</span>` : `<button class="btn danger" data-arb-del="${t.id}" type="button">Supprimer</button>`}</div></div>`; }).join("")}
       <button class="btn ghost" data-arb-ok="${g.date}" type="button">Garder les ${g.list.length} trajets</button>
     </div>`).join("")
     : `<div class="panel"><p class="sub" style="margin:0">✓ Aucun trajet suspect. Chaque jour compte au plus un trajet, ou a été validé.</p></div>`;
   document.querySelectorAll("[data-arb-del]").forEach(b => b.onclick = async () => {
     if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer la suppression"; b.dataset.confirm = "1"; return; }
-    const id = b.dataset.arbDel; trips = trips.filter(t => t.id !== id); saveAll(); renderArb(); await sync.delTrip(id);
+    const id = b.dataset.arbDel; if (trips.some(t => t.id === id && t.validated)) return;
+    trips = trips.filter(t => t.id !== id); saveAll(); renderArb(); await sync.delTrip(id);
   });
   document.querySelectorAll("[data-arb-ok]").forEach(b => b.onclick = async () => {
     const list = trips.filter(t => t.date === b.dataset.arbOk), ids = list.map(t => t.id);

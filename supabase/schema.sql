@@ -51,3 +51,13 @@ create policy "fk_settings_own" on fk_settings for all to authenticated using (u
 alter table fk_trips add column if not exists validated boolean not null default false;
 -- v11 : statut validé / à valider / suspect
 alter table fk_trips add column if not exists same_day_ok boolean not null default false;
+-- v12 : un trajet validé ne peut pas être supprimé (contrôle côté base)
+drop policy if exists "fk_trips_own" on fk_trips;
+drop policy if exists "fk_trips_select" on fk_trips;
+drop policy if exists "fk_trips_insert" on fk_trips;
+drop policy if exists "fk_trips_update" on fk_trips;
+drop policy if exists "fk_trips_delete" on fk_trips;
+create policy "fk_trips_select" on fk_trips for select to authenticated using (user_id = auth.uid());
+create policy "fk_trips_insert" on fk_trips for insert to authenticated with check (user_id = auth.uid());
+create policy "fk_trips_update" on fk_trips for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+create policy "fk_trips_delete" on fk_trips for delete to authenticated using (user_id = auth.uid() and not validated);
