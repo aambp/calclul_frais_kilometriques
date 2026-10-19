@@ -364,9 +364,12 @@ const COLORS = ["#1d4f9c", "#b5541c", "#1f7a4d", "#7a3fa0"];
 function drawMap(){
   if (!window.L) return;
   if (!map){
-    map = L.map("map", { zoomControl: true });
+    map = L.map("map", { zoomControl: true }).setView([48.8, 2.35], 10); // la carte doit avoir une vue avant d'y ajouter des tracés
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
   }
+  map.invalidateSize();
+  const all = routes.flatMap(r => r.geometry.coordinates.map(c => [c[1], c[0]]));
+  if (all.length) map.fitBounds(L.latLngBounds(all), { padding: [20, 20] });
   layers.forEach(l => map.removeLayer(l)); layers = [];
   routes.forEach((r, i) => {
     const ll = r.geometry.coordinates.map(c => [c[1], c[0]]);
@@ -375,8 +378,7 @@ function drawMap(){
   });
   layers.push(L.circleMarker([points.from.lat, points.from.lon], { radius: 7, color: "#1f7a4d", fillOpacity: 1 }).addTo(map));
   layers.push(L.circleMarker([points.to.lat, points.to.lon], { radius: 7, color: "#b5541c", fillOpacity: 1 }).addTo(map));
-  layers[sel] && layers[sel].bringToFront();
-  map.fitBounds(L.featureGroup(layers).getBounds(), { padding: [20, 20] });
+  if (layers[sel] && layers[sel].bringToFront) layers[sel].bringToFront();
 }
 function renderRoutes(){
   const maxKm = Math.max(...routes.map(r => r.distance));
@@ -389,7 +391,10 @@ function renderRoutes(){
   }).join("");
   document.querySelectorAll(".route").forEach(el => { el.onclick = () => selectRoute(+el.dataset.i); el.onkeydown = e => { if (e.key === "Enter") selectRoute(+el.dataset.i); }; });
 }
-function selectRoute(i){ sel = i; $("#kmOne").value = (routes[i].distance / 1000).toFixed(1); renderRoutes(); drawMap(); updateTotal(); }
+function selectRoute(i){
+  sel = i; $("#kmOne").value = (routes[i].distance / 1000).toFixed(1); renderRoutes(); updateTotal();
+  try{ drawMap(); }catch(e){ console.warn("Carte non affichée", e); } // un souci de carte ne bloque jamais la distance
+}
 $("#calc").onclick = async () => {
   const msg = $("#calcMsg"); msg.className = "msg";
   msg.textContent = "Calcul en cours…"; $("#calc").disabled = true;
