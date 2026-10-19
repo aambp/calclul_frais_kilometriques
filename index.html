@@ -95,7 +95,7 @@ nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--mu
 .trip.bad{border-left:3px solid var(--st-bad);padding-left:10px}
 .btn.mini{padding:6px 10px;font-size:.85rem}
 .legend{display:flex;flex-wrap:wrap;gap:8px}
-.cal{display:grid;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px}
+.cal{position:relative;display:grid;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px}
 .cal-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .cal-head b{font:600 1.15rem var(--f-display);text-transform:capitalize}
 .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
@@ -108,6 +108,10 @@ nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--mu
 .cal-grid button.hol{color:var(--muted);background:var(--line);border-color:var(--line);cursor:not-allowed;opacity:.7}
 .cal-grid button.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .cal-grid button.today{outline:2px solid var(--accent);outline-offset:-3px}
+.cal-tip{position:absolute;z-index:20;width:min(300px,calc(100% - 16px));background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;box-shadow:0 10px 28px rgb(0 0 0/.18);display:grid;gap:8px;font-size:.88rem;pointer-events:auto}
+.cal-tip b{text-transform:capitalize;font:600 1rem var(--f-display)}
+.tip-trip{display:grid;gap:2px;padding-top:8px;border-top:1px solid var(--line);justify-items:start}
+.tip-motif{font-weight:600;color:var(--ink)}
 .cal-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem}
 .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .dot.sel{background:var(--accent)} .dot.busy{background:var(--st-todo);border-radius:50%} .dot.b-ok{background:var(--st-ok);border-radius:50%} .dot.b-bad{background:var(--st-bad);border-radius:50%} .dot.off{border:1px dashed var(--muted)} .dot.hol{background:var(--line);border:1px solid var(--muted)}
@@ -148,6 +152,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <div id="cal" class="cal" hidden>
       <div class="cal-head"><button class="btn ghost mini" id="calPrev" type="button" aria-label="Mois précédent">‹</button><b id="calTitle"></b><button class="btn ghost mini" id="calNext" type="button" aria-label="Mois suivant">›</button></div>
       <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-tip" id="calTip" role="tooltip" hidden></div>
       <div class="cal-legend sub"><span><i class="dot sel"></i>sélectionné</span><span><i class="dot b-ok"></i>trajet validé</span><span><i class="dot busy"></i>trajet à valider</span><span><i class="dot b-bad"></i>suspect</span><span><i class="dot off"></i>week-end</span><span><i class="dot hol"></i>férié</span></div>
       <div class="row"><button class="btn ghost mini" id="calWork" type="button">Jours ouvrés du mois</button><button class="btn ghost mini" id="calClear" type="button">Tout effacer</button></div>
       <div class="msg" id="calInfo"></div>
@@ -251,7 +256,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 15</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 16</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -596,14 +601,37 @@ function renderCal(){
     if (busy.has(ds)) cls.push("busy", "b-" + dayStatus); else if (holMap[ds]) cls.push("hol"); else if (wd > 4) cls.push("off");
     if (why) selDates.delete(ds);
     if (selDates.has(ds)) cls.push("sel"); if (ds === td) cls.push("today");
-    html += `<button type="button" data-d="${ds}" class="${cls.join(" ")}" ${why ? `disabled title="${esc(why)}" aria-label="${d} : ${esc(why)}"` : ""} aria-pressed="${selDates.has(ds)}">${d}</button>`;
+    html += `<button type="button" data-d="${ds}" class="${cls.join(" ")}" ${why ? `aria-disabled="true" aria-label="${d} : ${esc(why)}"` : ""} aria-pressed="${selDates.has(ds)}">${d}</button>`;
   }
   $("#calGrid").innerHTML = html;
-  $("#calGrid").querySelectorAll("button[data-d]").forEach(b => b.onclick = () => { const d = b.dataset.d; selDates.has(d) ? selDates.delete(d) : selDates.add(d); renderCal(); });
+  $("#calGrid").querySelectorAll("button[data-d]").forEach(b => {
+    const locked = b.getAttribute("aria-disabled") === "true";
+    b.onclick = () => { if (locked){ showDayTip(b, true); return; } const d = b.dataset.d; selDates.has(d) ? selDates.delete(d) : selDates.add(d); renderCal(); };
+    if (locked){ b.onmouseenter = b.onfocus = () => showDayTip(b); b.onmouseleave = b.onblur = hideDayTip; }
+  });
   const n = selDates.size, sorted = [...selDates].sort();
   $("#calInfo").textContent = n ? `${n} jour(s) sélectionné(s) : du ${new Date(sorted[0]).toLocaleDateString("fr-FR")} au ${new Date(sorted[n - 1]).toLocaleDateString("fr-FR")}` : "Touchez les jours à enregistrer, ou utilisez « Jours ouvrés du mois ».";
   updateTotal();
 }
+/* Fiche d'un jour occupé ou férié, au survol (ou au toucher sur mobile) */
+function showDayTip(btn, toggle){
+  const tip = $("#calTip"), ds = btn.dataset.d;
+  if (toggle && !tip.hidden && tip.dataset.d === ds){ hideDayTip(); return; }
+  const list = trips.filter(t => t.date === ds), sus = suspectIds(), hol = holidaysOf(+ds.slice(0, 4))[ds];
+  tip.innerHTML = `<b>${new Date(ds).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })}</b>`
+    + (hol ? `<div class="sub">Férié : ${esc(hol)}</div>` : "")
+    + list.map(t => { const v = vehicles.find(x => x.id === t.vehId);
+        return `<div class="tip-trip">${STATUS[statusOf(t, sus)]}
+          <div class="tip-motif">${t.motif ? esc(t.motif) : `<span class="sub">Sans commentaire</span>`}</div>
+          <div class="sub">${esc(short(t.from))} → ${esc(short(t.to))}</div>
+          <div class="sub">${fmt(t.km)} km · ${t.roundTrip ? "aller-retour" : "aller simple"}${v ? " · " + esc(v.name) : ""}</div></div>`; }).join("");
+  tip.dataset.d = ds; tip.hidden = false;
+  const cal = $("#cal"), cr = cal.getBoundingClientRect(), br = btn.getBoundingClientRect(), w = tip.offsetWidth;
+  let left = br.left - cr.left + br.width / 2 - w / 2; left = Math.max(8, Math.min(left, cr.width - w - 8));
+  tip.style.left = left + "px"; tip.style.top = (br.bottom - cr.top + 6) + "px";
+}
+function hideDayTip(){ $("#calTip").hidden = true; }
+document.addEventListener("click", e => { if (!e.target.closest("#calGrid") && !e.target.closest("#calTip")) hideDayTip(); });
 document.querySelectorAll("#segDate button").forEach(b => b.onclick = () => {
   dateMode = b.dataset.v; document.querySelectorAll("#segDate button").forEach(x => x.classList.toggle("on", x === b));
   $("#dateWrap").hidden = dateMode === "multi"; $("#cal").hidden = dateMode !== "multi";
