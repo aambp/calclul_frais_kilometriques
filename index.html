@@ -25,6 +25,7 @@
   --bg:#10141c; --surface:#181e29; --ink:#e7ebf2; --muted:#9aa5b8; --line:#2a3342;
   --accent:#5b8ee0; --accent-ink:#0c1220; --accent-soft:#1d2a40; --ok:#4cc28a; --warn:#e88a55; color-scheme:dark}}
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);
   padding:env(safe-area-inset-top,0) max(16px,env(safe-area-inset-right,0px)) calc(88px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -82,6 +83,11 @@ nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:
   padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:1100}
 nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--muted);padding:10px 4px;border-radius:8px;cursor:pointer}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
+.login{position:fixed;inset:0;z-index:2000;background:var(--bg);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.login form{width:100%;max-width:380px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:1500;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9rem;max-width:calc(100% - 32px)}
+.toast.err{background:var(--warn);color:#fff}
+.banner{background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:12px 14px;display:grid;gap:8px}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:-4px}
 .chips button{border:1px solid var(--line);background:var(--bg);color:var(--ink);font:500 .82rem var(--f-body);padding:5px 10px;border-radius:999px;cursor:pointer}
 .chips button:hover{border-color:var(--accent);color:var(--accent)}
@@ -98,6 +104,10 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 
 <!-- NOUVEAU TRAJET -->
 <section data-tab="new">
+  <div class="banner" id="importBanner" hidden>
+    <div id="importTxt"></div>
+    <div class="row"><button class="btn" id="importYes" type="button">Importer dans mon compte</button><button class="btn ghost" id="importNo" type="button">Ignorer</button></div>
+  </div>
   <div class="panel">
     <div class="row">
       <label>Date<input type="date" id="date"></label>
@@ -144,6 +154,11 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 
 <!-- VÉHICULES -->
 <section data-tab="veh" hidden>
+  <div class="panel">
+    <h2>Compte</h2>
+    <div class="sub" id="accInfo">Non connecté</div>
+    <button class="btn ghost" id="logout" type="button">Se déconnecter</button>
+  </div>
   <div class="panel">
     <h2>Adresses par défaut</h2>
     <p class="sub" style="margin:0">Pré-remplies à chaque nouveau trajet (Domicile → Bureau). Modifiables trajet par trajet.</p>
@@ -192,7 +207,20 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
   <button data-go="bar" type="button">Barème</button>
 </nav>
 
+<div id="login" class="login" hidden>
+  <form class="panel" id="loginForm">
+    <h1>Frais <span>KM</span></h1>
+    <p class="sub" style="margin:0">Connectez-vous avec votre compte (le même que l'appli dépenses).</p>
+    <label>Email<input type="email" id="lEmail" autocomplete="username" required></label>
+    <label>Mot de passe<input type="password" id="lPass" autocomplete="current-password" required></label>
+    <button class="btn" id="lBtn" type="submit">Se connecter</button>
+    <div class="msg" id="lMsg" role="status"></div>
+  </form>
+</div>
+<div id="toast" class="toast" hidden></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 /* ===== Barème fiscal intégré =====
    Barème 2026 (revenus 2025), reconduit à l'identique depuis 2023 — arrêté du 16/02/2026.
@@ -278,7 +306,7 @@ function renderVehicles(){
   document.querySelectorAll("[data-del-veh]").forEach(b => b.onclick = () => {
     const id = b.dataset.delVeh;
     if (trips.some(t => t.vehId === id) && b.dataset.confirm !== "1"){ b.textContent = "Trajets liés : confirmer ?"; b.dataset.confirm = "1"; return; }
-    vehicles = vehicles.filter(v => v.id !== id); saveAll(); renderVehicles(); updateTotal();
+    vehicles = vehicles.filter(v => v.id !== id); saveAll(); renderVehicles(); updateTotal(); sync.delVeh(id);
   });
 }
 $("#vAdd").onclick = () => {
@@ -287,7 +315,7 @@ $("#vAdd").onclick = () => {
   if (!name || !cv){ m.textContent = "Renseignez le nom et la puissance fiscale."; m.className = "msg err"; return; }
   const v = { id: uid(), name, cv, elec: $("#vElec").checked, plate: $("#vPlate").value.trim().toUpperCase() };
   vehicles.push(v);
-  saveAll(); $("#vName").value = ""; $("#vPlate").value = ""; $("#vElec").checked = false; renderVehicles();
+  saveAll(); sync.veh(v); $("#vName").value = ""; $("#vPlate").value = ""; $("#vElec").checked = false; renderVehicles();
   $("#veh").value = v.id; updateTotal(); $("#saveMsg").textContent = "";
   m.textContent = `✓ ${name} ajouté et sélectionné pour vos trajets.`; m.className = "msg ok";
 };
@@ -357,7 +385,7 @@ $("#swap").onclick = () => {
 };
 $("#pSave").onclick = () => {
   places = { home: $("#pHome").value.trim() || PLACES_DEFAUT.home, work: $("#pWork").value.trim() || PLACES_DEFAUT.work };
-  LS.set("places", places); renderChips(); applyDefaults();
+  LS.set("places", places); sync.settings(); renderChips(); applyDefaults();
   $("#pMsg").textContent = "Adresses enregistrées.";
 };
 /* Un champ rempli sans choix dans la liste (adresse par défaut, saisie libre) est géocodé au moment du calcul */
@@ -446,9 +474,9 @@ $("#save").onclick = () => {
     msg.innerHTML = `Aucun véhicule. <button class="btn ghost" id="goVeh" type="button" style="padding:6px 10px">Ajouter un véhicule</button>`; msg.className = "msg err";
     $("#goVeh").onclick = () => document.querySelector('nav button[data-go="veh"]').click(); return; }
   if (one <= 0){ msg.textContent = "Distance manquante : saisissez les km aller."; msg.className = "msg err"; return; }
-  trips.push({ id: uid(), date: $("#date").value || today(), from: $("#from").value, to: $("#to").value, motif: $("#motif").value.trim(),
-               kmOne: Math.round(one * 10) / 10, roundTrip: factor === 2, km: Math.round(one * factor * 10) / 10, vehId: $("#veh").value });
-  saveAll();
+  const trip = { id: uid(), date: $("#date").value || today(), from: $("#from").value, to: $("#to").value, motif: $("#motif").value.trim(),
+               kmOne: Math.round(one * 10) / 10, roundTrip: factor === 2, km: Math.round(one * factor * 10) / 10, vehId: $("#veh").value };
+  trips.push(trip); saveAll(); sync.trip(trip);
   msg.textContent = "";
   $("#calcMsg").textContent = `✓ Trajet enregistré : ${fmt(one * factor)} km. Visible dans Historique.`; $("#calcMsg").className = "msg ok";
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -477,7 +505,7 @@ function renderHist(){
     : `<p class="sub">Aucun trajet pour cette sélection.</p>`;
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer"; b.dataset.confirm = "1"; return; }
-    trips = trips.filter(t => t.id !== b.dataset.del); saveAll(); renderHist();
+    const id = b.dataset.del; trips = trips.filter(t => t.id !== id); saveAll(); renderHist(); sync.delTrip(id);
   });
 }
 const short = s => (s || "—").split(",").slice(0, 2).join(",");
@@ -494,7 +522,7 @@ $("#csv").onclick = () => {
 };
 $("#backup").onclick = () => download(`frais-km-sauvegarde-${today()}.json`, JSON.stringify({ vehicles, trips }, null, 1), "application/json");
 $("#restore").onchange = async e => {
-  try{ const j = JSON.parse(await e.target.files[0].text()); if (Array.isArray(j.vehicles) && Array.isArray(j.trips)){ vehicles = j.vehicles; trips = j.trips; saveAll(); renderVehicles(); renderHist(); } }catch(err){}
+  try{ const j = JSON.parse(await e.target.files[0].text()); if (Array.isArray(j.vehicles) && Array.isArray(j.trips)){ vehicles = j.vehicles; trips = j.trips; saveAll(); renderVehicles(); renderHist(); if (await sync.all()) toast("Sauvegarde restaurée."); } }catch(err){}
   e.target.value = "";
 };
 
@@ -512,14 +540,88 @@ function renderBareme(){
 $("#barApply").onclick = () => {
   try{ const b = JSON.parse($("#barJson").value);
     if (!b.voiture || !b.electrique || !b.voiture["5"] || b.voiture["5"].length !== 4) throw new Error("structure");
-    bareme = b; LS.set("bareme", b); renderBareme(); $("#barMsg").textContent = "Barème appliqué."; $("#barMsg").className = "msg";
+    bareme = b; LS.set("bareme", b); sync.settings(); renderBareme(); $("#barMsg").textContent = "Barème appliqué."; $("#barMsg").className = "msg";
   }catch(e){ $("#barMsg").textContent = "JSON invalide : gardez la structure voiture / electrique avec 4 valeurs par ligne."; $("#barMsg").className = "msg err"; }
 };
-$("#barReset").onclick = () => { bareme = BAREME_DEFAUT; LS.set("bareme", null); renderBareme(); $("#barMsg").textContent = "Barème intégré rétabli."; };
+$("#barReset").onclick = () => { bareme = BAREME_DEFAUT; LS.set("bareme", null); sync.settings(); renderBareme(); $("#barMsg").textContent = "Barème intégré rétabli."; };
+
+/* ===== Base de données Supabase (tables fk_*) ===== */
+const SB_URL = "https://dmzopvuxeclezrrrjksx.supabase.co";
+const SB_KEY = "sb_publishable_WW_lNV3q3zPgHduU7lJfFA_JtKDDIPJ";
+let sb = null, session = null;
+try{ sb = window.supabase.createClient(SB_URL, SB_KEY); }catch(e){}
+let toastT;
+function toast(txt, err){ const t = $("#toast"); t.textContent = txt; t.className = "toast" + (err ? " err" : ""); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, err ? 6000 : 2500); }
+const toDbTrip = t => ({ id: t.id, date: t.date, from_addr: t.from || null, to_addr: t.to || null, motif: t.motif || null, km_one: t.kmOne, round_trip: !!t.roundTrip, km: t.km, veh_id: t.vehId || null });
+const fromDbTrip = r => ({ id: r.id, date: r.date, from: r.from_addr || "", to: r.to_addr || "", motif: r.motif || "", kmOne: +r.km_one, roundTrip: r.round_trip, km: +r.km, vehId: r.veh_id || "" });
+const toDbVeh = v => ({ id: v.id, name: v.name, cv: v.cv, elec: !!v.elec, plate: v.plate || null });
+async function remote(q){
+  if (!session) return true;
+  const { error } = await q;
+  if (error){ toast("Non synchronisé : " + error.message, true); return false; }
+  return true;
+}
+const sync = {
+  veh: v => remote(sb.from("fk_vehicles").upsert(toDbVeh(v))),
+  delVeh: id => remote(sb.from("fk_vehicles").delete().eq("id", id)),
+  trip: t => remote(sb.from("fk_trips").upsert(toDbTrip(t))),
+  delTrip: id => remote(sb.from("fk_trips").delete().eq("id", id)),
+  settings: () => remote(sb.from("fk_settings").upsert({ user_id: session && session.user.id, places, bareme: bareme === BAREME_DEFAUT ? null : bareme, updated_at: new Date().toISOString() })),
+  all: async () => (vehicles.length ? await remote(sb.from("fk_vehicles").upsert(vehicles.map(toDbVeh))) : true)
+                && (trips.length ? await remote(sb.from("fk_trips").upsert(trips.map(toDbTrip))) : true)
+};
+function renderAll(){ renderVehicles(); renderBareme(); renderChips(); applyDefaults(); updateTotal(); if (!document.querySelector('section[data-tab="hist"]').hidden) renderHist(); }
+async function loadRemote(){
+  const local = { vehicles: LS.get("vehicles", []), trips: LS.get("trips", []) };
+  const [v, t, s] = await Promise.all([
+    sb.from("fk_vehicles").select("*").order("created_at"),
+    sb.from("fk_trips").select("*").order("date"),
+    sb.from("fk_settings").select("*").maybeSingle()
+  ]);
+  if (v.error || t.error){ toast("Lecture impossible : " + (v.error || t.error).message, true); return; }
+  vehicles = v.data.map(r => ({ id: r.id, name: r.name, cv: r.cv, elec: r.elec, plate: r.plate || "" }));
+  trips = t.data.map(fromDbTrip);
+  if (s.data){ if (s.data.places) places = Object.assign({}, PLACES_DEFAUT, s.data.places); bareme = s.data.bareme || BAREME_DEFAUT; }
+  // Données saisies avant la connexion sur cet appareil : proposer de les importer
+  const knownT = new Set(trips.map(x => x.id)), newT = local.trips.filter(x => !knownT.has(x.id));
+  const knownV = new Set(vehicles.map(x => x.id)), newV = local.vehicles.filter(x => !knownV.has(x.id));
+  if (newT.length || newV.length){
+    $("#importTxt").textContent = `${newT.length} trajet(s) et ${newV.length} véhicule(s) enregistrés sur cet appareil ne sont pas encore dans votre compte.`;
+    $("#importBanner").hidden = false;
+    $("#importYes").onclick = async () => {
+      vehicles = vehicles.concat(newV); trips = trips.concat(newT);
+      if (await sync.all()){ saveAll(); renderAll(); $("#importBanner").hidden = true; toast("Import terminé."); }
+    };
+    $("#importNo").onclick = () => { $("#importBanner").hidden = true; saveAll(); };
+  } else saveAll();
+  LS.set("places", places); LS.set("bareme", bareme === BAREME_DEFAUT ? null : bareme);
+  renderAll();
+}
+function showLogin(on){ $("#login").hidden = !on; }
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault(); const m = $("#lMsg"); m.className = "msg"; m.textContent = "Connexion…"; $("#lBtn").disabled = true;
+  const { data, error } = await sb.auth.signInWithPassword({ email: $("#lEmail").value.trim(), password: $("#lPass").value });
+  $("#lBtn").disabled = false;
+  if (error){ m.textContent = error.message === "Invalid login credentials" ? "Email ou mot de passe incorrect." : error.message; m.className = "msg err"; return; }
+  session = data.session; m.textContent = ""; $("#lPass").value = ""; showLogin(false); $("#accInfo").textContent = "Connecté : " + session.user.email;
+  await loadRemote();
+};
+$("#logout").onclick = async () => {
+  if (sb) await sb.auth.signOut();
+  session = null; vehicles = []; trips = []; saveAll(); renderAll(); $("#accInfo").textContent = "Non connecté"; showLogin(true);
+};
 
 /* ===== Init ===== */
 $("#date").value = today();
-renderVehicles(); renderBareme(); renderChips(); applyDefaults(); updateTotal();
+renderAll();
+(async () => {
+  if (!sb){ toast("Base de données injoignable : mode local sur cet appareil.", true); return; }
+  const { data } = await sb.auth.getSession();
+  session = data.session;
+  if (!session){ showLogin(true); return; }
+  $("#accInfo").textContent = "Connecté : " + session.user.email;
+  await loadRemote();
+})();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>
