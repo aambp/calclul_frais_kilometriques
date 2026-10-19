@@ -1,0 +1,14 @@
+{
+  "name": "Frais KM",
+  "short_name": "Frais KM",
+  "description": "Suivi des frais kilométriques et barème fiscal",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3f5f9",
+  "theme_color": "#1d4f9c",
+  "lang": "fr",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
