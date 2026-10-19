@@ -147,7 +147,8 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <div class="stats" id="stats"></div>
     <div class="scroll" id="annual"></div>
     <div class="row"><button class="btn ghost" id="csv" type="button">Exporter CSV</button><button class="btn ghost" id="backup" type="button">Sauvegarde JSON</button></div>
-    <label>Restaurer une sauvegarde<input type="file" id="restore" accept="application/json"></label>
+    <label>Importer des trajets (CSV ou sauvegarde JSON)<input type="file" id="restore" accept=".csv,.json,text/csv,application/json"></label>
+    <div class="msg" id="impMsg" role="status"></div>
   </div>
   <div class="panel"><h2>Trajets</h2><div id="trips"></div></div>
 </section>
@@ -521,9 +522,100 @@ $("#csv").onclick = () => {
   download(`frais-km-${y}.csv`, "﻿" + rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
 };
 $("#backup").onclick = () => download(`frais-km-sauvegarde-${today()}.json`, JSON.stringify({ vehicles, trips }, null, 1), "application/json");
+/* ===== Import CSV / JSON ===== */
+const norm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/�/g, "").toLowerCase().trim();
+const num = s => parseFloat(String(s || "").replace(/\s/g, "").replace(",", ".")) || 0;
+function parseCsv(txt){
+  txt = txt.replace(/^﻿/, "");
+  const first = txt.split(/\r?\n/)[0], d = (first.match(/;/g) || []).length >= (first.match(/,/g) || []).length ? ";" : ",";
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < txt.length; i++){
+    const c = txt[i];
+    if (q){ if (c === '"'){ if (txt[i + 1] === '"'){ cell += '"'; i++; } else q = false; } else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === d){ row.push(cell); cell = ""; }
+    else if (c === "\n" || c === "\r"){ if (c === "\r" && txt[i + 1] === "\n") i++; row.push(cell); cell = ""; if (row.some(x => x !== "")) rows.push(row); row = []; }
+    else cell += c;
+  }
+  row.push(cell); if (row.some(x => x !== "")) rows.push(row);
+  return rows;
+}
+function parseDate(s){
+  s = String(s || "").trim(); let m;
+  if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return m[0];
+  return null;
+}
+function hashId(s){ let h = 5381; for (let i = 0; i < s.length; i++) h = (h * 33 ^ s.charCodeAt(i)) >>> 0; return "imp-" + h.toString(36); }
+/* Convertit les lignes CSV en trajets. Deux formats reconnus :
+   - export d'outil de notes de frais : Date ; Intitulé ; Itinéraire « A - B - A » ; Distance (totale) ; Véhicule ; Puissance fiscale
+   - export de cette appli : Date ; Départ ; Arrivée ; Motif ; Type ; Km aller ; Km total ; Véhicule ; CV ; Électrique */
+function csvToTrips(rows){
+  const h = rows[0].map(norm), col = (...names) => h.findIndex(x => names.includes(x));
+  const iDate = col("date"), iItin = col("itineraire"), iDist = col("distance"), iFrom = col("depart"), iTo = col("arrivee"),
+        iKmTot = col("km total"), iKmOne = col("km aller"), iType = col("type"), iVeh = col("vehicule"), iCv = col("puissance fiscale", "cv"),
+        iMotif = col("motif", "intitule"), iElec = col("electrique"), iCat = col("categorie");
+  if (iDate < 0 || (iItin < 0 && iFrom < 0)) throw new Error("colonnes Date et Itinéraire (ou Départ / Arrivée) introuvables");
+  const out = [], seen = {}, skipped = [];
+  rows.slice(1).forEach((r, n) => {
+    if (iCat >= 0 && r[iCat] && !/kilom/.test(norm(r[iCat]))) return; // autres catégories de frais ignorées
+    const date = parseDate(r[iDate]); if (!date){ skipped.push(n + 2); return; }
+    let from, to, kmOne, round, total;
+    if (iItin >= 0){
+      const pts = String(r[iItin]).split(" - ").map(s => s.trim()).filter(Boolean);
+      total = num(r[iDist]);
+      round = pts.length === 3 && norm(pts[0]) === norm(pts[2]);
+      from = pts[0] || ""; to = round ? pts[1] : pts.slice(1).join(" → ");
+      kmOne = round ? total / 2 : total;
+    } else {
+      from = r[iFrom] || ""; to = r[iTo] || ""; total = num(r[iKmTot]);
+      round = iType >= 0 ? /ar|retour/.test(norm(r[iType])) : false;
+      kmOne = iKmOne >= 0 ? num(r[iKmOne]) : (round ? total / 2 : total);
+    }
+    if (total <= 0){ skipped.push(n + 2); return; }
+    const vName = (iVeh >= 0 && r[iVeh] || "Véhicule importé").trim(), cv = Math.round(num(iCv >= 0 ? r[iCv] : 0)) || 5;
+    const key = [date, norm(from), norm(to), total].join("|"); seen[key] = (seen[key] || 0) + 1;
+    out.push({ id: hashId(key + "|" + seen[key]), date, from, to, motif: iMotif >= 0 ? (r[iMotif] || "").trim() : "",
+               kmOne: Math.round(kmOne * 100) / 100, roundTrip: round, km: Math.round(total * 100) / 100,
+               _veh: { name: vName, cv, elec: iElec >= 0 && /oui|yes|true|1/.test(norm(r[iElec])) } });
+  });
+  return { list: out, skipped };
+}
+async function readText(file){
+  const buf = await file.arrayBuffer();
+  const utf = new TextDecoder("utf-8").decode(buf);
+  return utf.includes("�") ? new TextDecoder("windows-1252").decode(buf) : utf; // exports Excel / outils FR en Latin-1
+}
 $("#restore").onchange = async e => {
-  try{ const j = JSON.parse(await e.target.files[0].text()); if (Array.isArray(j.vehicles) && Array.isArray(j.trips)){ vehicles = j.vehicles; trips = j.trips; saveAll(); renderVehicles(); renderHist(); if (await sync.all()) toast("Sauvegarde restaurée."); } }catch(err){}
-  e.target.value = "";
+  const file = e.target.files[0], m = $("#impMsg"); e.target.value = ""; if (!file) return;
+  m.className = "msg"; m.textContent = "Import en cours…";
+  try{
+    const txt = await readText(file);
+    if (/^\s*\{/.test(txt)){
+      const j = JSON.parse(txt);
+      if (!Array.isArray(j.vehicles) || !Array.isArray(j.trips)) throw new Error("sauvegarde JSON non reconnue");
+      vehicles = j.vehicles; trips = j.trips; saveAll(); renderVehicles(); renderHist();
+      if (await sync.all()){ m.textContent = `✓ Sauvegarde restaurée : ${trips.length} trajet(s).`; m.className = "msg ok"; }
+      return;
+    }
+    const { list, skipped } = csvToTrips(parseCsv(txt));
+    // Véhicules : réutilise un véhicule de même nom, sinon le crée
+    const newVeh = [];
+    list.forEach(t => {
+      let v = vehicles.concat(newVeh).find(x => norm(x.name) === norm(t._veh.name));
+      if (!v){ v = { id: uid(), name: t._veh.name, cv: t._veh.cv, elec: t._veh.elec, plate: "" }; newVeh.push(v); }
+      t.vehId = v.id; delete t._veh;
+    });
+    const known = new Set(trips.map(t => t.id)), fresh = list.filter(t => !known.has(t.id));
+    if (newVeh.length && !(await remote(sb && session ? sb.from("fk_vehicles").upsert(newVeh.map(toDbVeh)) : null))) throw new Error("véhicules non enregistrés en base");
+    for (let i = 0; i < fresh.length; i += 200)
+      if (!(await remote(sb && session ? sb.from("fk_trips").upsert(fresh.slice(i, i + 200).map(toDbTrip)) : null))) throw new Error("trajets non enregistrés en base");
+    vehicles = vehicles.concat(newVeh); trips = trips.concat(fresh); saveAll(); renderVehicles(); renderHist();
+    const km = fresh.reduce((s, t) => s + t.km, 0);
+    m.textContent = `✓ ${fresh.length} trajet(s) importé(s), ${fmt(km, 0)} km` + (list.length - fresh.length ? ` · ${list.length - fresh.length} déjà présent(s)` : "")
+      + (newVeh.length ? ` · véhicule créé : ${newVeh.map(v => v.name + " (" + v.cv + " CV)").join(", ")}` : "") + (skipped.length ? ` · lignes ignorées : ${skipped.join(", ")}` : "");
+    m.className = "msg ok";
+  }catch(err){ m.textContent = "Import impossible : " + err.message + "."; m.className = "msg err"; }
 };
 
 /* ===== Onglet barème ===== */

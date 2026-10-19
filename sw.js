@@ -1,5 +1,5 @@
 // Service worker minimal : réseau d'abord (toujours la dernière version), cache en secours hors connexion
-const CACHE = "frais-km-v2";
+const CACHE = "frais-km-v3";
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(["./", "./index.html", "./manifest.webmanifest", "./icon.svg"]))); });
 self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
 self.addEventListener("fetch", e => {
