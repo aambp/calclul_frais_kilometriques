@@ -208,6 +208,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
   <div class="panel">
     <h2>Trajets à arbitrer</h2>
     <p class="sub" style="margin:0">Jours comptant plusieurs trajets : doublon de saisie ou vrais trajets multiples. Supprimez le trajet en trop ou validez la journée.</p>
+    <div id="dupBox"></div>
     <div class="stats" id="arbStats"></div>
   </div>
   <div id="arbList" style="display:grid;gap:10px"></div>
@@ -261,7 +262,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 18</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 19</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -790,7 +791,36 @@ function arbImpact(groups){
     eurDiff += annualAmount(d, veh) - annualAmount(dKept, veh); });
   return { km, eur: eurDiff, n: extra.size };
 }
+/* Doublons exacts : même date, même itinéraire, mêmes km, même type. On garde la meilleure copie :
+   rattachée à un véhicule, puis validée, puis la plus ancienne. */
+const dupKey = t => [t.date, norm(t.from), norm(t.to), (+t.km).toFixed(1), !!t.roundTrip].join("|");
+function exactDuplicates(){
+  const groups = {}; trips.forEach(t => (groups[dupKey(t)] = groups[dupKey(t)] || []).push(t));
+  const score = t => (isOrphan(t) ? 0 : 4) + (t.validated ? 2 : 0) + (t.sameDayOk ? 1 : 0);
+  const extras = [];
+  Object.values(groups).filter(g => g.length > 1).forEach(g => { g.sort((a, b) => score(b) - score(a)); extras.push(...g.slice(1)); });
+  return extras;
+}
+async function removeDuplicates(extras){
+  const ids = extras.map(t => t.id), locked = extras.filter(t => t.validated).map(t => t.id);
+  for (let i = 0; i < locked.length; i += 200) // une copie validée en double est déverrouillée avant suppression
+    if (!(await remote(sb && session && sb.from("fk_trips").update({ validated: false }).in("id", locked.slice(i, i + 200))))) return;
+  for (let i = 0; i < ids.length; i += 200)
+    if (!(await remote(sb && session && sb.from("fk_trips").delete().in("id", ids.slice(i, i + 200))))) return;
+  const del = new Set(ids); trips = trips.filter(t => !del.has(t.id));
+  // La copie conservée hérite de la validation d'une copie supprimée
+  const lockedKeys = new Set(extras.filter(t => t.validated).map(dupKey)), inherit = trips.filter(t => !t.validated && lockedKeys.has(dupKey(t)));
+  if (inherit.length && await remote(sb && session && sb.from("fk_trips").update({ validated: true }).in("id", inherit.map(t => t.id)))) inherit.forEach(t => t.validated = true);
+  saveAll(); renderArb();
+  toast(`${ids.length} doublon(s) supprimé(s)` + (inherit.length ? `, ${inherit.length} copie(s) conservée(s) validée(s).` : "."));
+}
 function renderArb(){
+  const dups = exactDuplicates();
+  $("#dupBox").innerHTML = dups.length ? `<div class="banner"><div>⚠ <b>${dups.length} doublon(s) exact(s)</b> : même date, même itinéraire, mêmes km. La copie rattachée à un véhicule (et validée, le cas échéant) est conservée.</div>
+    <button class="btn" id="dupGo" type="button">Supprimer les ${dups.length} doublon(s)</button></div>` : "";
+  if (dups.length) $("#dupGo").onclick = e => { const b = e.currentTarget;
+    if (b.dataset.confirm !== "1"){ b.dataset.confirm = "1"; b.textContent = `Confirmer la suppression de ${dups.length} doublon(s)`; return; }
+    b.disabled = true; removeDuplicates(dups); };
   const groups = arbGroups(), imp = arbImpact(groups);
   $("#arbStats").innerHTML = `<div class="stat"><div class="l">Jours à arbitrer</div><div class="v">${groups.length}</div></div>
     <div class="stat"><div class="l">Trajets en trop possibles</div><div class="v">${imp.n} · ${fmt(imp.km, 0)} km</div></div>
@@ -1011,18 +1041,8 @@ async function loadRemote(){
   trips = t.data.map(fromDbTrip);
   places = Object.assign({}, PLACES_DEFAUT, s.data && s.data.places || {});
   bareme = s.data && s.data.bareme || BAREME_DEFAUT;
-  // Données saisies avant la connexion sur cet appareil : proposer de les importer
-  const knownT = new Set(trips.map(x => x.id)), newT = local.trips.filter(x => !knownT.has(x.id));
-  const knownV = new Set(vehicles.map(x => x.id)), newV = local.vehicles.filter(x => !knownV.has(x.id));
-  if (newT.length || newV.length){
-    $("#importTxt").textContent = `${newT.length} trajet(s) et ${newV.length} véhicule(s) enregistrés sur cet appareil ne sont pas encore dans votre compte.`;
-    $("#importBanner").hidden = false;
-    $("#importYes").onclick = async () => {
-      vehicles = vehicles.concat(newV); trips = trips.concat(newT);
-      if (await sync.all()){ saveAll(); renderAll(); $("#importBanner").hidden = true; toast("Import terminé."); }
-    };
-    $("#importNo").onclick = () => { $("#importBanner").hidden = true; saveAll(); };
-  } else saveAll();
+  // La base fait foi : le cache de l'appareil est remplacé (pas de fusion, source de doublons entre comptes)
+  saveAll();
   LS.set("places", places); LS.set("bareme", bareme === BAREME_DEFAUT ? null : bareme);
   renderAll();
 }
