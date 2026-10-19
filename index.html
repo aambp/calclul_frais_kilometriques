@@ -104,11 +104,12 @@ nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--mu
 .cal-grid button.off{color:var(--muted);background:none;border-style:dashed}
 .cal-grid button.busy{color:var(--muted);text-decoration:line-through;cursor:not-allowed;background:none}
 .cal-grid button.busy::after{content:"";position:absolute;bottom:4px;left:50%;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--st-todo)}
+.cal-grid button.hol,.cal-grid button.fut{color:var(--muted);background:var(--line);border-color:var(--line);cursor:not-allowed;opacity:.7}
 .cal-grid button.sel{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .cal-grid button.today{outline:2px solid var(--accent);outline-offset:-3px}
 .cal-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem}
 .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
-.dot.sel{background:var(--accent)} .dot.busy{background:var(--st-todo);border-radius:50%} .dot.off{border:1px dashed var(--muted)}
+.dot.sel{background:var(--accent)} .dot.busy{background:var(--st-todo);border-radius:50%} .dot.off{border:1px dashed var(--muted)} .dot.hol{background:var(--line);border:1px solid var(--muted)}
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
@@ -146,7 +147,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <div id="cal" class="cal" hidden>
       <div class="cal-head"><button class="btn ghost mini" id="calPrev" type="button" aria-label="Mois précédent">‹</button><b id="calTitle"></b><button class="btn ghost mini" id="calNext" type="button" aria-label="Mois suivant">›</button></div>
       <div class="cal-grid" id="calGrid"></div>
-      <div class="cal-legend sub"><span><i class="dot sel"></i>sélectionné</span><span><i class="dot busy"></i>déjà un trajet</span><span><i class="dot off"></i>week-end / férié</span></div>
+      <div class="cal-legend sub"><span><i class="dot sel"></i>sélectionné</span><span><i class="dot busy"></i>déjà un trajet</span><span><i class="dot off"></i>week-end</span><span><i class="dot hol"></i>férié / à venir</span></div>
       <div class="row"><button class="btn ghost mini" id="calWork" type="button">Jours ouvrés du mois</button><button class="btn ghost mini" id="calClear" type="button">Tout effacer</button></div>
       <div class="msg" id="calInfo"></div>
     </div>
@@ -249,7 +250,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 13</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 14</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -534,6 +535,7 @@ $("#save").onclick = () => {
     $("#goVeh").onclick = () => document.querySelector('nav button[data-go="veh"]').click(); return; }
   if (one <= 0){ msg.textContent = "Distance manquante : saisissez les km aller."; msg.className = "msg err"; return; }
   if (dateMode === "multi"){ saveMulti(one); return; }
+  if (($("#date").value || today()) > today()){ msg.textContent = "Date à venir : un trajet se saisit une fois effectué."; msg.className = "msg err"; return; }
   const trip = { id: uid(), date: $("#date").value || today(), from: $("#from").value, to: $("#to").value, motif: $("#motif").value.trim(),
                kmOne: Math.round(one * 10) / 10, roundTrip: factor === 2, km: Math.round(one * factor * 10) / 10, vehId: $("#veh").value };
   // Règle : un trajet par jour ; un second trajet le même jour demande une validation explicite
@@ -570,16 +572,30 @@ function holidays(y){
   const plus = n => { const x = new Date(easter); x.setDate(x.getDate() + n); return ymd(x); };
   return new Set([`${y}-01-01`, `${y}-05-01`, `${y}-05-08`, `${y}-07-14`, `${y}-08-15`, `${y}-11-01`, `${y}-11-11`, `${y}-12-25`, plus(1), plus(39), plus(50)]);
 }
+/* Jours fériés officiels (calendrier.api.gouv.fr) ; en attendant ou hors ligne, calcul local */
+const holCache = {};
+function holidaysOf(y){
+  if (holCache[y]) return holCache[y];
+  holCache[y] = Object.fromEntries([...holidays(y)].map(d => [d, "Jour férié"]));
+  try{
+    fetch(`https://calendrier.api.gouv.fr/jours-feries/metropole/${y}.json`).then(r => r.ok ? r.json() : null)
+      .then(j => { if (j && Object.keys(j).length){ holCache[y] = j; if (!$("#cal").hidden) renderCal(); } }).catch(() => {});
+  }catch(e){} // hors ligne : le calcul local suffit
+  return holCache[y];
+}
 function renderCal(){
-  const y = calMonth.getFullYear(), m = calMonth.getMonth(), hol = holidays(y), busy = new Set(trips.map(t => t.date)), td = today();
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), holMap = holidaysOf(y), busy = new Set(trips.map(t => t.date)), td = today();
   $("#calTitle").textContent = calMonth.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
   const first = (new Date(y, m, 1).getDay() + 6) % 7, nb = new Date(y, m + 1, 0).getDate();
   let html = ["Lu", "Ma", "Me", "Je", "Ve", "Sa", "Di"].map(w => `<div class="wd">${w}</div>`).join("") + "<div></div>".repeat(first);
   for (let d = 1; d <= nb; d++){
     const ds = ymd(new Date(y, m, d)), wd = (first + d - 1) % 7, cls = [];
-    if (busy.has(ds)) cls.push("busy"); else if (wd > 4 || hol.has(ds)) cls.push("off");
+    const why = busy.has(ds) ? "Un trajet existe déjà ce jour (saisie « Une date » pour en ajouter un second)"
+      : holMap[ds] ? `Férié : ${holMap[ds]}` : ds > td ? "Jour à venir" : "";
+    if (busy.has(ds)) cls.push("busy"); else if (holMap[ds]) cls.push("hol"); else if (ds > td) cls.push("fut"); else if (wd > 4) cls.push("off");
+    if (why) selDates.delete(ds);
     if (selDates.has(ds)) cls.push("sel"); if (ds === td) cls.push("today");
-    html += `<button type="button" data-d="${ds}" class="${cls.join(" ")}" ${busy.has(ds) ? `disabled title="Un trajet existe déjà ce jour (saisie unitaire pour en ajouter un second)"` : ""} aria-pressed="${selDates.has(ds)}">${d}</button>`;
+    html += `<button type="button" data-d="${ds}" class="${cls.join(" ")}" ${why ? `disabled title="${esc(why)}" aria-label="${d} : ${esc(why)}"` : ""} aria-pressed="${selDates.has(ds)}">${d}</button>`;
   }
   $("#calGrid").innerHTML = html;
   $("#calGrid").querySelectorAll("button[data-d]").forEach(b => b.onclick = () => { const d = b.dataset.d; selDates.has(d) ? selDates.delete(d) : selDates.add(d); renderCal(); });
@@ -596,8 +612,8 @@ $("#calPrev").onclick = () => { calMonth.setMonth(calMonth.getMonth() - 1); rend
 $("#calNext").onclick = () => { calMonth.setMonth(calMonth.getMonth() + 1); renderCal(); };
 $("#calClear").onclick = () => { selDates.clear(); renderCal(); };
 $("#calWork").onclick = () => {
-  const y = calMonth.getFullYear(), m = calMonth.getMonth(), hol = holidays(y), busy = new Set(trips.map(t => t.date)), nb = new Date(y, m + 1, 0).getDate();
-  for (let d = 1; d <= nb; d++){ const dt = new Date(y, m, d), ds = ymd(dt), wd = (dt.getDay() + 6) % 7; if (wd < 5 && !hol.has(ds) && !busy.has(ds)) selDates.add(ds); }
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), hol = holidaysOf(y), busy = new Set(trips.map(t => t.date)), nb = new Date(y, m + 1, 0).getDate(), td = today();
+  for (let d = 1; d <= nb; d++){ const dt = new Date(y, m, d), ds = ymd(dt), wd = (dt.getDay() + 6) % 7; if (wd < 5 && !hol[ds] && !busy.has(ds) && ds <= td) selDates.add(ds); }
   renderCal();
 };
 async function saveMulti(one){
@@ -979,7 +995,7 @@ $("#logout").onclick = async () => {
 };
 
 /* ===== Init ===== */
-$("#date").value = today();
+$("#date").value = today(); $("#date").max = today();
 renderAll();
 (async () => {
   if (!sb){ toast("Base de données injoignable : mode local sur cet appareil.", true); return; }
