@@ -169,8 +169,8 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
   <div class="panel">
     <h2>Adresses par défaut</h2>
     <p class="sub" style="margin:0">Pré-remplies à chaque nouveau trajet (Domicile → Bureau). Modifiables trajet par trajet.</p>
-    <label>Domicile<input id="pHome" placeholder="Ex. 12 rue de la Paix, 75002 Paris"></label>
-    <label>Bureau<input id="pWork" placeholder="Ex. Nom de l'entreprise, adresse, code postal ville"></label>
+    <label class="ac">Domicile<input id="pHome" autocomplete="off" placeholder="Tapez une adresse…"><ul hidden></ul></label>
+    <label class="ac">Bureau<input id="pWork" autocomplete="off" placeholder="Tapez une adresse…"><ul hidden></ul></label>
     <button class="btn ghost" id="pSave" type="button">Enregistrer les adresses</button>
     <div class="msg" id="pMsg"></div>
   </div>
@@ -207,7 +207,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a></p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 8</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -375,7 +375,7 @@ function setupAC(id){
   });
   inp.addEventListener("blur", () => setTimeout(() => ul.hidden = true, 150));
 }
-setupAC("from"); setupAC("to");
+setupAC("from"); setupAC("to"); setupAC("pHome"); setupAC("pWork");
 
 /* ===== Adresses par défaut (Domicile / Bureau) ===== */
 const PLACES_DEFAUT = { home: "", work: "" }; // chaque utilisateur renseigne les siennes dans Réglages
@@ -620,10 +620,10 @@ $("#restore").onchange = async e => {
       t.vehId = v.id; delete t._veh;
     });
     const known = new Set(trips.map(t => t.id)), fresh = list.filter(t => !known.has(t.id));
-    if (newVeh.length){
-      if (!(await remote(sb && session ? sb.from("fk_vehicles").insert(newVeh.map(toDbVeh)) : null))) throw new Error("véhicules non enregistrés en base");
-      vehicles = vehicles.concat(newVeh); saveAll(); renderVehicles(); // gardés même si la suite échoue : pas de doublon au prochain essai
-    }
+    // Véhicules utilisés par l'import (nouveaux ou déjà connus de l'appareil) : garantis présents en base avant les trajets
+    const usedIds = new Set(fresh.map(t => t.vehId)), usedVeh = vehicles.concat(newVeh).filter(v => usedIds.has(v.id));
+    if (usedVeh.length && !(await remote(sb && session ? sb.from("fk_vehicles").upsert(usedVeh.map(toDbVeh), { onConflict: "id" }) : null))) throw new Error("véhicules non enregistrés en base");
+    if (newVeh.length){ vehicles = vehicles.concat(newVeh); saveAll(); renderVehicles(); } // gardés même si la suite échoue : pas de doublon au prochain essai
     // Insertion sans écrasement : un trajet déjà présent est ignoré au lieu de faire échouer l'import
     for (let i = 0; i < fresh.length; i += 200)
       if (!(await remote(sb && session ? sb.from("fk_trips").upsert(fresh.slice(i, i + 200).map(toDbTrip), { onConflict: "id", ignoreDuplicates: true }) : null))) throw new Error("trajets non enregistrés en base");
@@ -632,7 +632,7 @@ $("#restore").onchange = async e => {
     m.textContent = `✓ ${fresh.length} trajet(s) importé(s), ${fmt(km, 0)} km` + (list.length - fresh.length ? ` · ${list.length - fresh.length} déjà présent(s)` : "")
       + (newVeh.length ? ` · véhicule créé : ${newVeh.map(v => v.name + " (" + v.cv + " CV)").join(", ")}` : "") + (skipped.length ? ` · lignes ignorées : ${skipped.join(", ")}` : "");
     m.className = "msg ok";
-  }catch(err){ m.textContent = "Import impossible : " + err.message + "."; m.className = "msg err"; }
+  }catch(err){ m.textContent = "Import impossible : " + err.message + (lastDbError ? " — " + lastDbError : "") + "."; m.className = "msg err"; lastDbError = ""; }
 };
 
 /* ===== Onglet barème ===== */
@@ -666,10 +666,11 @@ const uidCol = () => session ? { user_id: session.user.id } : {};
 const toDbTrip = t => ({ ...uidCol(), id: t.id, date: t.date, from_addr: t.from || null, to_addr: t.to || null, motif: t.motif || null, km_one: t.kmOne, round_trip: !!t.roundTrip, km: t.km, veh_id: t.vehId || null });
 const fromDbTrip = r => ({ id: r.id, date: r.date, from: r.from_addr || "", to: r.to_addr || "", motif: r.motif || "", kmOne: +r.km_one, roundTrip: r.round_trip, km: +r.km, vehId: r.veh_id || "" });
 const toDbVeh = v => ({ ...uidCol(), id: v.id, name: v.name, cv: v.cv, elec: !!v.elec, plate: v.plate || null });
+let lastDbError = "";
 async function remote(q){
   if (!session) return true;
   const { error } = await q;
-  if (error){ toast("Non synchronisé : " + error.message, true); return false; }
+  if (error){ lastDbError = [error.message, error.details, error.hint, error.code].filter(Boolean).join(" · "); console.error(error); toast("Non synchronisé : " + error.message, true); return false; }
   return true;
 }
 const sync = {
