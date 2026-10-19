@@ -454,7 +454,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 25</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 26</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
   <button data-go="kpi" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="13.5" width="3" height="4" rx="1"/></svg><span class="nl">Indicateurs</span></button>
@@ -921,7 +921,7 @@ async function saveMulti(one){
 /* ===== Historique & synthèse annuelle ===== */
 function renderHist(){
   const years = [...new Set(trips.map(t => t.date.slice(0, 4)).concat(String(new Date().getFullYear())))].sort().reverse();
-  const cy = $("#fYear").value || years[0];
+  const cy = (histYearWanted && years.includes(histYearWanted) ? histYearWanted : "") || $("#fYear").value || years[0]; histYearWanted = "";
   $("#fYear").innerHTML = years.map(y => `<option ${y === cy ? "selected" : ""}>${y}</option>`).join("");
   const vf = $("#fVeh").value, rank = { bad: 0, todo: 1, ok: 2 }, sus0 = suspectIds();
   const all = tripsOf(cy, vf).sort((a, b) => (rank[statusOf(a, sus0)] - rank[statusOf(b, sus0)]) || b.date.localeCompare(a.date));
@@ -1017,7 +1017,7 @@ function renderVehTools(vf, list){
   if ($("#delVehHere")) $("#delVehHere").onclick = () => { vehicles = vehicles.filter(x => x.id !== v.id); $("#fVeh").value = ""; saveAll(); renderVehicles(); renderHist(); sync.delVeh(v.id); toast("Véhicule supprimé."); };
   $("#allVeh").onclick = () => { $("#fVeh").value = ""; renderHist(); };
 }
-let histStatus = ""; // filtre de statut de l'Historique : "", "bad", "todo" ou "ok"
+let histStatus = "", histYearWanted = ""; // filtre de statut de l'Historique : "", "bad", "todo" ou "ok"
 /* Statut d'un trajet : suspect (rouge) si sa journée compte plusieurs trajets non arbitrés, sinon validé (vert) ou à valider (orange) */
 const STATUS = { ok: `<span class="pill st-ok">Validé</span>`, todo: `<span class="pill st-todo">À valider</span>`, bad: `<span class="pill st-bad">Suspect</span>` };
 function suspectIds(){ const s = new Set(); arbGroups().forEach(g => g.list.forEach(t => s.add(t.id))); return s; }
@@ -1436,11 +1436,12 @@ function renderHome(){
   if (missing.length) alerts.push(`<div class="alert info"><span>📅 <b>${missing.length} jour(s) ouvré(s) sans trajet</b> cette semaine : ${missing.map(dayShort).join(", ")}.</span>
     ${list.length ? `<button class="btn" type="button" id="fillMissing">Saisir ${list.length > 1 ? "ces jours" : `« ${esc(favLabel(list[0]))} »`}</button>` : ""}</div>`);
   if (bad) alerts.push(`<div class="alert bad"><span>⚖ <b>${bad} jour(s) suspect(s)</b> à arbitrer (plusieurs trajets le même jour).</span><button class="btn ghost" type="button" data-go2="arb">Arbitrer</button></div>`);
-  if (todo.length) alerts.push(`<div class="alert todo"><span>● <b>${todo.length} trajet(s) à valider</b>.</span><button class="btn ghost" type="button" data-go2="todo">Voir</button></div>`);
+  const todoY = {}; todo.forEach(t => todoY[t.date.slice(0, 4)] = (todoY[t.date.slice(0, 4)] || 0) + 1);
+  Object.keys(todoY).sort().reverse().forEach(yr => alerts.push(`<div class="alert todo"><span>● <b>${todoY[yr]} trajet(s) à valider en ${yr}</b>.</span><button class="btn ghost" type="button" data-go2="todo" data-yr="${yr}">Voir</button></div>`));
   $("#homeAlerts").innerHTML = alerts.join("");
   $("#homeAlerts").querySelectorAll("[data-go2]").forEach(b => b.onclick = () => {
     if (b.dataset.go2 === "arb") return goTab("arb");
-    histStatus = "todo"; $("#fYear").value = ""; goTab("hist"); $("#tripsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+    histStatus = "todo"; histYearWanted = b.dataset.yr; $("#fVeh").value = ""; hDay = ""; $("#hSearch").value = ""; goTab("hist"); $("#tripsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   });
   if ($("#fillMissing")) $("#fillMissing").onclick = () => favForDays(list[0], missing);
   // Mois en cours
@@ -1450,7 +1451,7 @@ function renderHome(){
   $("#homeStats").innerHTML = `<div class="stat"><div class="l">Kilomètres</div><div class="v">${fmt(mKm, 0)} km</div></div>
     <div class="stat"><div class="l">Indemnités estimées</div><div class="v">${eur(mEur)}</div></div>
     <div class="stat link" id="homeTrips" title="Voir dans l'historique"><div class="l">Trajets</div><div class="v">${mt.length}</div><div class="sub">${mOk} validé(s) · ${mt.length - mOk} à traiter</div></div>`;
-  $("#homeTrips").onclick = () => { $("#fYear").value = y; goTab("hist"); };
+  $("#homeTrips").onclick = () => { histYearWanted = y; goTab("hist"); };
   // Tranches du barème par véhicule
   const vy = vehicles.map(v => ({ v, d: tripsOf(y, v.id).reduce((a, t) => a + t.km, 0) })).filter(x => x.d);
   $("#homeTranche").innerHTML = vy.length ? vy.map(({ v, d }) => {
