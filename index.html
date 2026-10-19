@@ -169,6 +169,14 @@ nav .badge{position:absolute;top:2px;left:calc(50% + 6px)}
 .fav-card b{font:600 1.1rem var(--f-display)}
 .fav-card .row{display:flex;flex-wrap:wrap;gap:8px} .fav-card .row .btn{flex:1 1 auto;white-space:nowrap}
 .fav-add{display:flex;flex-wrap:wrap;gap:8px}
+.fav-add input.err,.fav-edit input.err{border-color:var(--st-bad);outline:2px solid color-mix(in srgb,var(--st-bad) 30%,transparent)}
+.fav-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.fav-head h2{margin:0;font-size:1.15rem}
+.fav-edit-list{display:grid;gap:10px}
+.fav-edit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface)}
+.fav-edit input{font-weight:600}
+.fav-edit .sub{grid-column:1/-1}
+.fav-edit .warn{color:var(--st-todo);font-size:.8rem;font-weight:600;grid-column:1/-1}
 .fav-add input{flex:1 1 220px} .fav-add .btn{flex:0 0 auto}
 .memo{padding:10px 12px;border-radius:8px;background:var(--accent-soft);font-size:.92rem}
 .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -295,6 +303,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 
 <!-- NOUVEAU TRAJET -->
 <section data-tab="new" hidden>
+  <div class="fav-head" id="favHead" hidden><h2>Trajets favoris</h2><button class="btn ghost mini" id="favManage" type="button" aria-pressed="false">Gérer</button></div>
   <div class="favs" id="favBar"></div>
   <div class="banner" id="importBanner" hidden>
     <div id="importTxt"></div>
@@ -335,7 +344,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     </div>
     <button class="btn" id="save" type="button">Enregistrer le trajet</button>
     <div class="msg" id="saveMsg" role="status"></div>
-    <div class="fav-add"><input id="favName" placeholder="Nom du favori (ex. Domicile ⇄ Bureau)" aria-label="Nom du favori"><button class="btn ghost" id="favAdd" type="button">★ Ajouter aux favoris</button></div>
+    <div class="fav-add"><input id="favName" placeholder="Titre du favori (obligatoire, ex. Domicile ⇄ Bureau)" aria-label="Titre du favori" maxlength="60"><button class="btn ghost" id="favAdd" type="button">★ Ajouter aux favoris</button></div>
   </div>
 </section>
 
@@ -420,7 +429,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <label>Adresse (option)<input id="meAddress" autocomplete="street-address"></label>
     <button class="btn ghost" id="meSave" type="button">Enregistrer</button>
   </div>
-  <div class="panel"><h2>Trajets favoris</h2><div id="favList"></div></div>
+  <div class="panel"><h2>Trajets favoris</h2><p class="sub" style="margin:0">Modifiez le titre directement dans le champ ; il est enregistré dès que vous quittez le champ.</p><div id="favList" class="fav-edit-list"></div></div>
   <div class="panel">
     <h2>Ajouter un véhicule</h2>
     <label>Nom<input id="vName" placeholder="Ex. Peugeot 308"></label>
@@ -454,7 +463,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 26</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 27</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
   <button data-go="kpi" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="13.5" width="3" height="4" rx="1"/></svg><span class="nl">Indicateurs</span></button>
@@ -1357,23 +1366,51 @@ function loadFav(f){
   $("#routes").innerHTML = `<div class="memo">★ Favori « ${esc(favLabel(f))} » : ${fmt(f.kmOne)} km aller.</div>`; updateTotal();
 }
 async function saveSettings(){ LS.set("places", places); await sync.settings(); }
-function renderFavs(){
-  const list = favs();
-  $("#favBar").innerHTML = list.map(f => `<button type="button" class="fav" data-fav="${f.id}"><b>★ ${esc(favLabel(f))}</b><span>${f.roundTrip ? "Aller-retour" : "Aller simple"} · ${fmt(favKm(f))} km</span></button>`).join("");
-  $("#favBar").querySelectorAll("[data-fav]").forEach(b => b.onclick = () => { loadFav(favs().find(f => f.id === b.dataset.fav)); $("#resPanel").scrollIntoView({ behavior: "smooth", block: "start" }); });
-  $("#favList").innerHTML = list.length ? list.map(f => `<div class="trip"><div class="r">★ ${esc(favLabel(f))}</div><div class="k">${fmt(favKm(f))} km</div>
-      <div class="m">${esc(short(f.from))} → ${esc(short(f.to))} · ${f.roundTrip ? "Aller-retour" : "Aller simple"}${f.motif ? " · " + esc(f.motif) : ""}</div>
-      <div class="m" style="text-align:right"><button class="btn danger" data-favdel="${f.id}" type="button">Supprimer</button></div></div>`).join("")
-    : `<p class="sub" style="margin:0">Aucun favori. Après le calcul d'un trajet, cliquez sur « ★ Ajouter aux favoris ».</p>`;
-  $("#favList").querySelectorAll("[data-favdel]").forEach(b => b.onclick = async () => {
-    const f = favs().find(x => x.id === b.dataset.favdel); places.favs = favs().filter(x => x !== f); await saveSettings(); renderFavs(); rerender();
-    toastUndo(`Favori « ${favLabel(f)} » supprimé.`, async () => { favs().push(f); await saveSettings(); renderFavs(); rerender(); });
+let favManage = false;
+/* Un titre auto-généré à partir des adresses (anciens favoris) doit être remplacé par un vrai titre */
+const favNeedsTitle = f => !f.name || /→/.test(f.name) && f.name.length > 30;
+function favEditor(f){
+  return `<div class="fav-edit" data-fe="${f.id}">
+    <input value="${esc(f.name || "")}" placeholder="Titre obligatoire" aria-label="Titre du favori" maxlength="60" data-fname="${f.id}">
+    <button class="btn danger" data-favdel="${f.id}" type="button">Supprimer</button>
+    <span class="sub">${esc(short(f.from))} → ${esc(short(f.to))} · ${f.roundTrip ? "Aller-retour" : "Aller simple"} · ${fmt(favKm(f))} km${f.motif ? " · " + esc(f.motif) : ""}</span>
+    ${favNeedsTitle(f) ? `<span class="warn">⚠ Donnez-lui un titre court (ex. « Domicile ⇄ Bureau »).</span>` : ""}</div>`;
+}
+function bindFavEditors(root){
+  root.querySelectorAll("[data-fname]").forEach(inp => inp.onchange = async () => {
+    const f = favs().find(x => x.id === inp.dataset.fname), v = inp.value.trim();
+    if (!v){ inp.classList.add("err"); inp.value = f.name || ""; toast("Le titre est obligatoire.", true); return; }
+    if (favs().some(x => x !== f && norm(x.name) === norm(v))){ inp.classList.add("err"); toast("Un autre favori porte déjà ce titre.", true); return; }
+    inp.classList.remove("err"); f.name = v; await saveSettings(); renderFavs(); rerender(); toast("Titre enregistré.");
+  });
+  root.querySelectorAll("[data-favdel]").forEach(b => b.onclick = async () => {
+    const f = favs().find(x => x.id === b.dataset.favdel), pos = favs().indexOf(f);
+    places.favs = favs().filter(x => x !== f); await saveSettings(); renderFavs(); rerender();
+    toastUndo(`Favori « ${favLabel(f)} » supprimé.`, async () => { favs().splice(pos, 0, f); await saveSettings(); renderFavs(); rerender(); });
   });
 }
+function renderFavs(){
+  const list = favs();
+  $("#favHead").hidden = !list.length; if (!list.length) favManage = false;
+  $("#favManage").textContent = favManage ? "Terminé" : "Gérer"; $("#favManage").setAttribute("aria-pressed", favManage);
+  $("#favBar").className = favManage ? "fav-edit-list" : "favs";
+  $("#favBar").innerHTML = favManage ? list.map(favEditor).join("")
+    : list.map(f => `<button type="button" class="fav" data-fav="${f.id}"><b>★ ${esc(favLabel(f))}</b><span>${f.roundTrip ? "Aller-retour" : "Aller simple"} · ${fmt(favKm(f))} km${favNeedsTitle(f) ? " · ⚠ à renommer" : ""}</span></button>`).join("");
+  if (favManage) bindFavEditors($("#favBar"));
+  else $("#favBar").querySelectorAll("[data-fav]").forEach(b => b.onclick = () => { loadFav(favs().find(f => f.id === b.dataset.fav)); $("#resPanel").scrollIntoView({ behavior: "smooth", block: "start" }); });
+  $("#favList").innerHTML = list.length ? list.map(favEditor).join("")
+    : `<p class="sub" style="margin:0">Aucun favori. Après le calcul d'un trajet, donnez-lui un titre puis cliquez sur « ★ Ajouter aux favoris ».</p>`;
+  bindFavEditors($("#favList"));
+}
+$("#favManage").onclick = () => { favManage = !favManage; renderFavs(); };
+$("#favName").oninput = () => $("#favName").classList.remove("err");
 $("#favAdd").onclick = async () => {
   const kmOne = num($("#kmOne").value);
   if (kmOne <= 0){ toast("Calculez ou saisissez d'abord la distance aller.", true); return; }
-  const name = $("#favName").value.trim() || `${short($("#from").value)} → ${short($("#to").value)}`;
+  const name = $("#favName").value.trim();
+  if (!name){ $("#favName").classList.add("err"); $("#favName").focus(); toast("Donnez un titre au favori (ex. « Domicile ⇄ Bureau »).", true); return; }
+  if (favs().some(x => norm(x.name) === norm(name))){ $("#favName").classList.add("err"); $("#favName").focus(); toast("Un favori porte déjà ce titre.", true); return; }
+  $("#favName").classList.remove("err");
   favs().push({ id: uid(), name, from: $("#from").value, to: $("#to").value, kmOne: Math.round(kmOne * 10) / 10, roundTrip: factor === 2, vehId: $("#veh").value, motif: $("#motif").value.trim() });
   await saveSettings(); $("#favName").value = ""; renderFavs(); toast(`Favori « ${name} » enregistré.`);
 };
