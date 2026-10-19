@@ -661,9 +661,11 @@ let sb = null, session = null;
 try{ sb = window.supabase.createClient(SB_URL, SB_KEY); }catch(e){}
 let toastT;
 function toast(txt, err){ const t = $("#toast"); t.textContent = txt; t.className = "toast" + (err ? " err" : ""); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, err ? 6000 : 2500); }
-const toDbTrip = t => ({ id: t.id, date: t.date, from_addr: t.from || null, to_addr: t.to || null, motif: t.motif || null, km_one: t.kmOne, round_trip: !!t.roundTrip, km: t.km, veh_id: t.vehId || null });
+// user_id envoyé explicitement : en envoi groupé, une colonne absente arrive vide au lieu de prendre sa valeur par défaut
+const uidCol = () => session ? { user_id: session.user.id } : {};
+const toDbTrip = t => ({ ...uidCol(), id: t.id, date: t.date, from_addr: t.from || null, to_addr: t.to || null, motif: t.motif || null, km_one: t.kmOne, round_trip: !!t.roundTrip, km: t.km, veh_id: t.vehId || null });
 const fromDbTrip = r => ({ id: r.id, date: r.date, from: r.from_addr || "", to: r.to_addr || "", motif: r.motif || "", kmOne: +r.km_one, roundTrip: r.round_trip, km: +r.km, vehId: r.veh_id || "" });
-const toDbVeh = v => ({ id: v.id, name: v.name, cv: v.cv, elec: !!v.elec, plate: v.plate || null });
+const toDbVeh = v => ({ ...uidCol(), id: v.id, name: v.name, cv: v.cv, elec: !!v.elec, plate: v.plate || null });
 async function remote(q){
   if (!session) return true;
   const { error } = await q;
