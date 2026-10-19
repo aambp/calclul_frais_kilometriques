@@ -587,7 +587,8 @@ function csvToTrips(rows){
     if (total <= 0){ skipped.push(n + 2); return; }
     const vName = (iVeh >= 0 && r[iVeh] || "Véhicule importé").trim(), cv = Math.round(num(iCv >= 0 ? r[iCv] : 0)) || 5;
     const key = [date, norm(from), norm(to), total].join("|"); seen[key] = (seen[key] || 0) + 1;
-    out.push({ id: hashId(key + "|" + seen[key]), date, from, to, motif: iMotif >= 0 ? (r[iMotif] || "").trim() : "",
+    const scope = session ? session.user.id : "local"; // identifiant propre au compte : deux comptes peuvent importer le même fichier
+    out.push({ id: hashId(scope + "|" + key + "|" + seen[key]), date, from, to, motif: iMotif >= 0 ? (r[iMotif] || "").trim() : "",
                kmOne: Math.round(kmOne * 100) / 100, roundTrip: round, km: Math.round(total * 100) / 100,
                _veh: { name: vName, cv, elec: iElec >= 0 && /oui|yes|true|1/.test(norm(r[iElec])) } });
   });
@@ -619,10 +620,14 @@ $("#restore").onchange = async e => {
       t.vehId = v.id; delete t._veh;
     });
     const known = new Set(trips.map(t => t.id)), fresh = list.filter(t => !known.has(t.id));
-    if (newVeh.length && !(await remote(sb && session ? sb.from("fk_vehicles").upsert(newVeh.map(toDbVeh)) : null))) throw new Error("véhicules non enregistrés en base");
+    if (newVeh.length){
+      if (!(await remote(sb && session ? sb.from("fk_vehicles").insert(newVeh.map(toDbVeh)) : null))) throw new Error("véhicules non enregistrés en base");
+      vehicles = vehicles.concat(newVeh); saveAll(); renderVehicles(); // gardés même si la suite échoue : pas de doublon au prochain essai
+    }
+    // Insertion sans écrasement : un trajet déjà présent est ignoré au lieu de faire échouer l'import
     for (let i = 0; i < fresh.length; i += 200)
-      if (!(await remote(sb && session ? sb.from("fk_trips").upsert(fresh.slice(i, i + 200).map(toDbTrip)) : null))) throw new Error("trajets non enregistrés en base");
-    vehicles = vehicles.concat(newVeh); trips = trips.concat(fresh); saveAll(); renderVehicles(); renderHist();
+      if (!(await remote(sb && session ? sb.from("fk_trips").upsert(fresh.slice(i, i + 200).map(toDbTrip), { onConflict: "id", ignoreDuplicates: true }) : null))) throw new Error("trajets non enregistrés en base");
+    trips = trips.concat(fresh); saveAll(); renderVehicles(); renderHist();
     const km = fresh.reduce((s, t) => s + t.km, 0);
     m.textContent = `✓ ${fresh.length} trajet(s) importé(s), ${fmt(km, 0)} km` + (list.length - fresh.length ? ` · ${list.length - fresh.length} déjà présent(s)` : "")
       + (newVeh.length ? ` · véhicule créé : ${newVeh.map(v => v.name + " (" + v.cv + " CV)").join(", ")}` : "") + (skipped.length ? ` · lignes ignorées : ${skipped.join(", ")}` : "");
