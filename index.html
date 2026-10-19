@@ -89,9 +89,32 @@ td.n,th.n{text-align:right}
 .stat .l{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
 .stat .v{font:700 1.6rem/1.1 var(--f-display);font-variant-numeric:tabular-nums}
 .plate{display:inline-block;font:700 .8rem var(--f-display);border:1.5px solid var(--ink);border-radius:4px;padding:0 6px;letter-spacing:.05em}
-nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(5,1fr);
-  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:1100}
-nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--muted);padding:10px 4px;border-radius:8px;cursor:pointer}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:1100;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;
+  background:color-mix(in srgb,var(--surface) 88%,transparent);backdrop-filter:saturate(1.4) blur(12px);-webkit-backdrop-filter:saturate(1.4) blur(12px);
+  border-top:1px solid var(--line);box-shadow:0 -6px 24px rgb(0 0 0/.06);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+nav button{position:relative;border:0;background:none;font:600 .74rem var(--f-body);color:var(--muted);padding:7px 2px 6px;border-radius:12px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .15s,background .15s}
+nav button:hover{color:var(--ink)}
+.ni{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+nav button.on .ni{stroke-width:2.2}
+nav .badge{position:absolute;top:2px;left:calc(50% + 6px)}
+.nav-brand,.nav-foot{display:none}
+@media (min-width:900px){
+  body{padding-left:calc(236px + 32px);padding-bottom:32px}
+  nav{top:0;right:auto;width:236px;grid-template-columns:1fr;grid-auto-rows:min-content;align-content:start;gap:4px;
+    padding:20px 14px calc(16px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px));
+    border-top:0;border-right:1px solid var(--line);box-shadow:4px 0 24px rgb(0 0 0/.04);background:var(--surface)}
+  .nav-brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+  .nav-brand img{height:40px;background:#fff;border-radius:8px;padding:3px 5px}
+  .nav-brand span{font:700 1.45rem var(--f-display)} .nav-brand b{background:var(--accent);color:var(--accent-ink);padding:0 6px;border-radius:4px}
+  .nav-foot{display:block;margin-top:auto;position:absolute;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:22px;font-size:.75rem;color:var(--muted)}
+  nav button{flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;font-size:.98rem;border-radius:10px}
+  nav button.on{box-shadow:inset 3px 0 0 var(--accent)}
+  nav .badge{position:static;margin-left:auto}
+  header h1 .logo,header h1{display:none}
+  header{padding-block:22px 6px;justify-content:flex-end}
+}
 .badge{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font-size:.7rem;line-height:18px;text-align:center;vertical-align:1px}
 .pill{display:inline-flex;align-items:center;gap:5px;font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.05em;padding:2px 8px;border-radius:999px;border:1.5px solid currentColor;white-space:nowrap}
 .pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
@@ -130,6 +153,7 @@ nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--mu
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
+@media (prefers-reduced-motion:reduce){nav button{transition:none}}
 .login{position:fixed;inset:0;z-index:2000;background:var(--bg);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
 .login form{width:100%;max-width:380px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:1500;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9rem;max-width:calc(100% - 32px)}
@@ -273,13 +297,15 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 20</p>
-<nav>
-  <button data-go="new" class="on" type="button">Trajet</button>
-  <button data-go="hist" type="button">Historique</button>
-  <button data-go="arb" type="button">Arbitrage <span class="badge" id="arbBadge" hidden></span></button>
-  <button data-go="veh" type="button">Réglages</button>
-  <button data-go="bar" type="button">Barème</button>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 21</p>
+<nav aria-label="Navigation principale">
+  <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
+  <button data-go="new" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg><span class="nl">Trajet</span></button>
+  <button data-go="hist" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg><span class="nl">Historique</span></button>
+  <button data-go="arb" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 20h12M5 7h14"/><path d="M5 7l-2.6 6a3 3 0 0 0 5.2 0L5 7zM19 7l-2.6 6a3 3 0 0 0 5.2 0L19 7z"/></svg><span class="nl">Arbitrage</span><span class="badge" id="arbBadge" hidden></span></button>
+  <button data-go="veh" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg><span class="nl">Réglages</span></button>
+  <button data-go="bar" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2.5"/><path d="M3.5 9h17M9.5 9v11"/></svg><span class="nl">Barème</span></button>
+  <div class="nav-foot">© 2026 AMN CONSEIL</div>
 </nav>
 
 <div id="login" class="login" hidden>
