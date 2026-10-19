@@ -282,7 +282,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 <header><h1><img class="logo" src="logo.png" alt="AMN CONSEIL">Frais <span>KM</span></h1><span class="sub" id="yearLbl"></span></header>
 
 <!-- ACCUEIL -->
-<section data-tab="home">
+<section data-tab="home" hidden>
   <div class="hello"><h2 id="hTitle">Bonjour</h2><span class="sub" id="hSub"></span></div>
   <div class="panel"><h2>Saisie rapide</h2><div id="homeFavs" class="favs"></div></div>
   <div id="homeAlerts" class="home-alerts"></div>
@@ -363,7 +363,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 
 <!-- INDICATEURS -->
-<section data-tab="kpi" hidden>
+<section data-tab="kpi">
   <div class="panel">
     <div class="hello"><h2>Indicateurs</h2><span class="sub" id="kSub"></span></div>
     <div class="row3"><label>Année<select id="kYear"></select></label><label>Véhicule<select id="kVeh"></select></label>
@@ -454,13 +454,13 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 24</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 25</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
-  <button data-go="home" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19z"/></svg><span class="nl">Accueil</span></button>
+  <button data-go="kpi" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="13.5" width="3" height="4" rx="1"/></svg><span class="nl">Indicateurs</span></button>
+  <button data-go="home" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19z"/></svg><span class="nl">Accueil</span></button>
   <button data-go="new" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg><span class="nl">Trajet</span></button>
   <button data-go="hist" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12h8M8 15.5h5"/></svg><span class="nl">Historique</span></button>
-  <button data-go="kpi" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="13.5" width="3" height="4" rx="1"/></svg><span class="nl">Indicateurs</span></button>
   <button data-go="arb" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M6 20h12M5 7h14"/><path d="M5 7l-2.6 6a3 3 0 0 0 5.2 0L5 7zM19 7l-2.6 6a3 3 0 0 0 5.2 0L19 7z"/></svg><span class="nl">Arbitrage</span><span class="badge" id="arbBadge" hidden></span></button>
   <button data-go="veh" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8"/></svg><span class="nl">Réglages</span></button>
   <div class="nav-foot">© 2026 AMN CONSEIL</div>
@@ -1873,6 +1873,7 @@ $("#logout").onclick = async () => {
 };
 
 /* ===== Init ===== */
+document.body.classList.add("wide");
 $("#date").value = today();
 renderAll();
 (async () => {
