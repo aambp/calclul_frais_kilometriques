@@ -119,6 +119,14 @@ nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--mu
 .cal-legend{display:flex;flex-wrap:wrap;gap:12px;font-size:.78rem}
 .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .dot.sel{background:var(--accent)} .dot.busy{background:var(--st-todo);border-radius:50%} .dot.b-ok{background:var(--st-ok);border-radius:50%} .dot.b-bad{background:var(--st-bad);border-radius:50%} .dot.off{border:1px dashed var(--muted)} .dot.hol{background:var(--line);border:1px solid var(--muted)}
+.arb-tools{display:flex;flex-wrap:wrap;gap:8px}
+.arb-tools .btn{flex:1 1 220px}
+.arb-bar{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:30;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 14px;box-shadow:0 8px 24px rgb(0 0 0/.25)}
+.arb-bar .btn.danger{background:var(--st-bad);color:#fff;padding:9px 14px}
+.arb-bar .btn.ghost{background:transparent;color:var(--bg);border:1px solid currentColor;padding:8px 12px}
+.trip .pick{display:flex;align-items:center;gap:10px;min-width:0}
+.trip .pick input{width:20px;height:20px;flex:none;accent-color:var(--st-bad)}
+.trip.picked{background:color-mix(in srgb,var(--st-bad) 9%,transparent);border-radius:8px}
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
@@ -210,8 +218,11 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <p class="sub" style="margin:0">Jours comptant plusieurs trajets : doublon de saisie ou vrais trajets multiples. Supprimez le trajet en trop ou validez la journée.</p>
     <div id="dupBox"></div>
     <div class="stats" id="arbStats"></div>
+    <div class="row"><label>Année<select id="arbYear"></select></label></div>
+    <div id="arbTools" class="arb-tools"></div>
   </div>
   <div id="arbList" style="display:grid;gap:10px"></div>
+  <div id="arbBar" class="arb-bar" hidden></div>
 </section>
 
 <!-- VÉHICULES -->
@@ -262,7 +273,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 19</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 20</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -814,6 +825,7 @@ async function removeDuplicates(extras){
   saveAll(); renderArb();
   toast(`${ids.length} doublon(s) supprimé(s)` + (inherit.length ? `, ${inherit.length} copie(s) conservée(s) validée(s).` : "."));
 }
+const arbSel = new Set(); // trajets cochés dans l'onglet Arbitrage
 function renderArb(){
   const dups = exactDuplicates();
   $("#dupBox").innerHTML = dups.length ? `<div class="banner"><div>⚠ <b>${dups.length} doublon(s) exact(s)</b> : même date, même itinéraire, mêmes km. La copie rattachée à un véhicule (et validée, le cas échéant) est conservée.</div>
@@ -821,23 +833,59 @@ function renderArb(){
   if (dups.length) $("#dupGo").onclick = e => { const b = e.currentTarget;
     if (b.dataset.confirm !== "1"){ b.dataset.confirm = "1"; b.textContent = `Confirmer la suppression de ${dups.length} doublon(s)`; return; }
     b.disabled = true; removeDuplicates(dups); };
-  const groups = arbGroups(), imp = arbImpact(groups);
-  $("#arbStats").innerHTML = `<div class="stat"><div class="l">Jours à arbitrer</div><div class="v">${groups.length}</div></div>
+  // Filtre par année
+  const allGroups = arbGroups(), years = [...new Set(allGroups.map(g => g.date.slice(0, 4)))].sort().reverse();
+  const cy = years.includes($("#arbYear").value) ? $("#arbYear").value : "";
+  $("#arbYear").innerHTML = `<option value="">Toutes</option>` + years.map(y => `<option ${y === cy ? "selected" : ""}>${y}</option>`).join("");
+  $("#arbYear").onchange = () => { arbSel.clear(); renderArb(); };
+  const groups = allGroups.filter(g => !cy || g.date.startsWith(cy)), imp = arbImpact(groups);
+  const visible = new Set(groups.flatMap(g => g.list.map(t => t.id)));
+  [...arbSel].forEach(id => { if (!visible.has(id)) arbSel.delete(id); });
+  // Pré-sélections
+  const extrasOf = g => { const keep = g.list.some(t => t.validated) ? null : [...g.list].sort((a, b) => (isOrphan(a) - isOrphan(b)) || (b.km - a.km) || a.id.localeCompare(b.id))[0];
+    return g.list.filter(t => !t.validated && t !== keep); };
+  const afterValidated = groups.filter(g => g.list.some(t => t.validated)).flatMap(g => g.list.filter(t => !t.validated));
+  const allExtras = groups.flatMap(extrasOf);
+  $("#arbStats").innerHTML = `<div class="stat"><div class="l">Jours à arbitrer${cy ? " " + cy : ""}</div><div class="v">${groups.length}</div></div>
     <div class="stat"><div class="l">Trajets en trop possibles</div><div class="v">${imp.n} · ${fmt(imp.km, 0)} km</div></div>
     <div class="stat"><div class="l">Impact si doublons</div><div class="v">${eur(imp.eur)}</div></div>`;
+  $("#arbTools").innerHTML = groups.length ? `
+    <button class="btn ghost" id="selAfterVal" type="button" ${afterValidated.length ? "" : "disabled"}>Sélectionner les ${afterValidated.length} trajet(s) non validé(s) des jours déjà validés</button>
+    <button class="btn ghost" id="selExtras" type="button" ${allExtras.length ? "" : "disabled"}>Sélectionner les ${allExtras.length} trajet(s) en trop${cy ? " de " + cy : ""} (garde 1 par jour)</button>` : "";
+  if (groups.length){
+    $("#selAfterVal").onclick = () => { afterValidated.forEach(t => arbSel.add(t.id)); renderArb(); };
+    $("#selExtras").onclick = () => { allExtras.forEach(t => arbSel.add(t.id)); renderArb(); };
+  }
   $("#arbList").innerHTML = groups.length ? groups.map(g => `<div class="day panel">
       <h3><span>${new Date(g.date).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span><span class="tag">${g.list.length} trajets</span></h3>
-      ${g.list.map(t => { const v = vehicles.find(x => x.id === t.vehId);
-        return `<div class="trip"><div class="r">${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
+      ${g.list.map(t => { const v = vehicles.find(x => x.id === t.vehId), on = arbSel.has(t.id);
+        return `<div class="trip${on ? " picked" : ""}"><label class="pick r">${t.validated ? `<span title="Validé : non supprimable">🔒</span>` : `<input type="checkbox" data-pick="${t.id}" ${on ? "checked" : ""} aria-label="Sélectionner ce trajet">`}<span>${esc(short(t.from))} → ${esc(short(t.to))}</span></label><div class="k">${fmt(t.km)} km</div>
           <div class="m">${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${esc(v ? v.name : "véhicule supprimé")}${t.motif ? " · " + esc(t.motif) : ""}</div>
-          <div class="m" style="text-align:right">${t.validated ? `<span class="pill st-ok">Validé 🔒</span>` : `<button class="btn danger" data-arb-del="${t.id}" type="button">Supprimer</button>`}</div></div>`; }).join("")}
+          <div class="m" style="text-align:right">${t.validated ? `<span class="pill st-ok">Validé</span>` : `<button class="btn danger" data-arb-del="${t.id}" type="button">Supprimer</button>`}</div></div>`; }).join("")}
       <button class="btn ghost" data-arb-ok="${g.date}" type="button">Garder les ${g.list.length} trajets</button>
     </div>`).join("")
-    : `<div class="panel"><p class="sub" style="margin:0">✓ Aucun trajet suspect. Chaque jour compte au plus un trajet, ou a été validé.</p></div>`;
+    : `<div class="panel"><p class="sub" style="margin:0">✓ Aucun trajet suspect${cy ? " en " + cy : ""}. Chaque jour compte au plus un trajet, ou a été arbitré.</p></div>`;
+  document.querySelectorAll("[data-pick]").forEach(c => c.onchange = () => { c.checked ? arbSel.add(c.dataset.pick) : arbSel.delete(c.dataset.pick); renderArb(); });
+  // Barre d'action de la sélection
+  const sel = trips.filter(t => arbSel.has(t.id) && !t.validated), bar = $("#arbBar");
+  bar.hidden = !sel.length;
+  if (sel.length){
+    const days = new Set(sel.map(t => t.date)), emptied = groups.filter(g => g.list.every(t => arbSel.has(t.id))).length;
+    bar.innerHTML = `<span><b>${sel.length}</b> trajet(s) sélectionné(s) · ${fmt(sel.reduce((a, t) => a + t.km, 0), 0)} km · ${days.size} jour(s)${emptied ? ` · <b>⚠ ${emptied} jour(s) sans aucun trajet restant</b>` : ""}</span>
+      <span style="display:flex;gap:8px"><button class="btn ghost" id="selNone" type="button">Désélectionner</button><button class="btn danger" id="selDel" type="button">Supprimer la sélection</button></span>`;
+    $("#selNone").onclick = () => { arbSel.clear(); renderArb(); };
+    $("#selDel").onclick = async e => { const b = e.currentTarget;
+      if (b.dataset.confirm !== "1"){ b.dataset.confirm = "1"; b.textContent = `Confirmer : supprimer ${sel.length} trajet(s)`; return; }
+      b.disabled = true; const ids = sel.map(t => t.id);
+      for (let i = 0; i < ids.length; i += 200)
+        if (!(await remote(sb && session && sb.from("fk_trips").delete().in("id", ids.slice(i, i + 200))))){ b.disabled = false; return; }
+      const del = new Set(ids); trips = trips.filter(t => !del.has(t.id)); arbSel.clear(); saveAll(); renderArb(); toast(`${ids.length} trajet(s) supprimé(s).`);
+    };
+  }
   document.querySelectorAll("[data-arb-del]").forEach(b => b.onclick = async () => {
     if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer la suppression"; b.dataset.confirm = "1"; return; }
     const id = b.dataset.arbDel; if (trips.some(t => t.id === id && t.validated)) return;
-    trips = trips.filter(t => t.id !== id); saveAll(); renderArb(); await sync.delTrip(id);
+    trips = trips.filter(t => t.id !== id); arbSel.delete(id); saveAll(); renderArb(); await sync.delTrip(id);
   });
   document.querySelectorAll("[data-arb-ok]").forEach(b => b.onclick = async () => {
     const list = trips.filter(t => t.date === b.dataset.arbOk), ids = list.map(t => t.id);
