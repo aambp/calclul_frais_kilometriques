@@ -207,7 +207,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 8</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 9</p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -489,6 +489,18 @@ $("#save").onclick = () => {
   if (one <= 0){ msg.textContent = "Distance manquante : saisissez les km aller."; msg.className = "msg err"; return; }
   const trip = { id: uid(), date: $("#date").value || today(), from: $("#from").value, to: $("#to").value, motif: $("#motif").value.trim(),
                kmOne: Math.round(one * 10) / 10, roundTrip: factor === 2, km: Math.round(one * factor * 10) / 10, vehId: $("#veh").value };
+  // Règle : un trajet par jour ; un second trajet le même jour demande une validation explicite
+  const force = $("#save").dataset.force === "1"; $("#save").dataset.force = "";
+  const sameDay = trips.filter(t => t.date === trip.date);
+  if (sameDay.length && !force){
+    msg.innerHTML = `⚠ ${sameDay.length > 1 ? sameDay.length + " trajets existent" : "Un trajet existe"} déjà le ${new Date(trip.date).toLocaleDateString("fr-FR")} : `
+      + sameDay.map(t => `${esc(short(t.from))} → ${esc(short(t.to))} (${fmt(t.km)} km)`).join(" ; ")
+      + `. <div class="row" style="margin-top:8px"><button class="btn" id="forceSave" type="button">Enregistrer quand même</button><button class="btn ghost" id="cancelSave" type="button">Annuler</button></div>`;
+    msg.className = "msg err";
+    $("#forceSave").onclick = () => { $("#save").dataset.force = "1"; $("#save").click(); };
+    $("#cancelSave").onclick = () => { msg.textContent = ""; };
+    return;
+  }
   trips.push(trip); saveAll(); sync.trip(trip);
   msg.textContent = "";
   $("#calcMsg").textContent = `✓ Trajet enregistré : ${fmt(one * factor)} km. Visible dans Historique.`; $("#calcMsg").className = "msg ok";
@@ -594,6 +606,12 @@ function csvToTrips(rows){
   });
   return { list: out, skipped };
 }
+/* Insertion sans écrasement : un trajet déjà présent en base est ignoré au lieu de faire échouer l'import */
+async function insertTrips(list){
+  for (let i = 0; i < list.length; i += 200)
+    if (!(await remote(sb && session ? sb.from("fk_trips").upsert(list.slice(i, i + 200).map(toDbTrip), { onConflict: "id", ignoreDuplicates: true }) : null))) throw new Error("trajets non enregistrés en base");
+  trips = trips.concat(list); saveAll(); renderVehicles(); renderHist();
+}
 async function readText(file){
   const buf = await file.arrayBuffer();
   const utf = new TextDecoder("utf-8").decode(buf);
@@ -619,19 +637,29 @@ $("#restore").onchange = async e => {
       if (!v){ v = { id: uid(), name: t._veh.name, cv: t._veh.cv, elec: t._veh.elec, plate: "" }; newVeh.push(v); }
       t.vehId = v.id; delete t._veh;
     });
-    const known = new Set(trips.map(t => t.id)), fresh = list.filter(t => !known.has(t.id));
+    const known = new Set(trips.map(t => t.id)), newOnes = list.filter(t => !known.has(t.id));
+    // Règle un trajet par jour : les trajets tombant un jour déjà occupé (en base ou plus haut dans le fichier) attendent une validation
+    const busy = new Set(trips.map(t => t.date)), fresh = [], pending = [];
+    newOnes.forEach(t => { if (busy.has(t.date)) pending.push(t); else { fresh.push(t); busy.add(t.date); } });
     // Véhicules utilisés par l'import (nouveaux ou déjà connus de l'appareil) : garantis présents en base avant les trajets
     const usedIds = new Set(fresh.map(t => t.vehId)), usedVeh = vehicles.concat(newVeh).filter(v => usedIds.has(v.id));
     if (usedVeh.length && !(await remote(sb && session ? sb.from("fk_vehicles").upsert(usedVeh.map(toDbVeh), { onConflict: "id" }) : null))) throw new Error("véhicules non enregistrés en base");
     if (newVeh.length){ vehicles = vehicles.concat(newVeh); saveAll(); renderVehicles(); } // gardés même si la suite échoue : pas de doublon au prochain essai
-    // Insertion sans écrasement : un trajet déjà présent est ignoré au lieu de faire échouer l'import
-    for (let i = 0; i < fresh.length; i += 200)
-      if (!(await remote(sb && session ? sb.from("fk_trips").upsert(fresh.slice(i, i + 200).map(toDbTrip), { onConflict: "id", ignoreDuplicates: true }) : null))) throw new Error("trajets non enregistrés en base");
-    trips = trips.concat(fresh); saveAll(); renderVehicles(); renderHist();
+    await insertTrips(fresh);
     const km = fresh.reduce((s, t) => s + t.km, 0);
-    m.textContent = `✓ ${fresh.length} trajet(s) importé(s), ${fmt(km, 0)} km` + (list.length - fresh.length ? ` · ${list.length - fresh.length} déjà présent(s)` : "")
-      + (newVeh.length ? ` · véhicule créé : ${newVeh.map(v => v.name + " (" + v.cv + " CV)").join(", ")}` : "") + (skipped.length ? ` · lignes ignorées : ${skipped.join(", ")}` : "");
+    m.innerHTML = esc(`✓ ${fresh.length} trajet(s) importé(s), ${fmt(km, 0)} km` + (list.length - newOnes.length ? ` · ${list.length - newOnes.length} déjà présent(s), ignoré(s)` : "")
+      + (newVeh.length ? ` · véhicule créé : ${newVeh.map(v => v.name + " (" + v.cv + " CV)").join(", ")}` : "") + (skipped.length ? ` · lignes ignorées : ${skipped.join(", ")}` : ""));
     m.className = "msg ok";
+    if (pending.length){
+      m.innerHTML += `<div class="banner" style="margin-top:10px"><div>⚠ ${pending.length} trajet(s) tombent un jour qui a déjà un trajet : `
+        + pending.map(t => `${new Date(t.date).toLocaleDateString("fr-FR")} (${fmt(t.km)} km)`).join(", ")
+        + `.</div><div class="row"><button class="btn" id="pendYes" type="button">Les importer aussi</button><button class="btn ghost" id="pendNo" type="button">Ne pas les importer</button></div></div>`;
+      $("#pendYes").onclick = async () => {
+        try{ await insertTrips(pending); m.textContent = `✓ ${pending.length} trajet(s) supplémentaire(s) importé(s).`; m.className = "msg ok"; }
+        catch(err){ m.textContent = "Import impossible : " + err.message + (lastDbError ? " — " + lastDbError : "") + "."; m.className = "msg err"; lastDbError = ""; }
+      };
+      $("#pendNo").onclick = () => { m.textContent = `${pending.length} trajet(s) non importé(s).`; m.className = "msg"; };
+    }
   }catch(err){ m.textContent = "Import impossible : " + err.message + (lastDbError ? " — " + lastDbError : "") + "."; m.className = "msg err"; lastDbError = ""; }
 };
 
