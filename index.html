@@ -122,6 +122,13 @@ nav .badge{position:absolute;top:2px;left:calc(50% + 6px)}
 .trip.bad{border-left:3px solid var(--st-bad);padding-left:10px}
 .btn.mini{padding:6px 10px;font-size:.85rem}
 .legend{display:flex;flex-wrap:wrap;gap:8px}
+.pill-btn{background:none;cursor:pointer;font-family:var(--f-body)}
+.pill-btn:hover{background:color-mix(in srgb,currentColor 10%,transparent)}
+.pill-btn.active{background:currentColor}
+.pill-btn.active{color:var(--surface)}
+.pill-btn.st-ok.active{background:var(--st-ok)} .pill-btn.st-todo.active{background:var(--st-todo)} .pill-btn.st-bad.active{background:var(--st-bad)}
+.pill-btn.active::before{background:var(--surface)}
+.filter-note{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;background:var(--accent-soft);font-weight:600;margin-bottom:6px}
 .cal{position:relative;display:grid;gap:10px;border:1px solid var(--line);border-radius:10px;padding:12px}
 .cal-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .cal-head b{font:600 1.15rem var(--f-display);text-transform:capitalize}
@@ -297,7 +304,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 21</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 22</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
   <button data-go="new" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg><span class="nl">Trajet</span></button>
@@ -711,15 +718,19 @@ function renderHist(){
   const years = [...new Set(trips.map(t => t.date.slice(0, 4)).concat(String(new Date().getFullYear())))].sort().reverse();
   const cy = $("#fYear").value || years[0];
   $("#fYear").innerHTML = years.map(y => `<option ${y === cy ? "selected" : ""}>${y}</option>`).join("");
-  const vf = $("#fVeh").value, list = tripsOf(cy, vf).sort((a, b) => b.date.localeCompare(a.date));
-  const totKm = list.reduce((s, t) => s + t.km, 0), totEur = list.reduce((s, t) => s + tripAmount(t), 0);
-  const sus = suspectIds(), cnt = { ok: 0, todo: 0, bad: 0 }; list.forEach(t => cnt[statusOf(t, sus)]++);
+  const vf = $("#fVeh").value, rank = { bad: 0, todo: 1, ok: 2 }, sus0 = suspectIds();
+  const all = tripsOf(cy, vf).sort((a, b) => (rank[statusOf(a, sus0)] - rank[statusOf(b, sus0)]) || b.date.localeCompare(a.date));
+  if (histStatus && !all.some(t => statusOf(t, sus0) === histStatus)) histStatus = "";
+  const list = histStatus ? all.filter(t => statusOf(t, sus0) === histStatus) : all;
+  const totKm = all.reduce((s, t) => s + t.km, 0), totEur = all.reduce((s, t) => s + tripAmount(t), 0);
+  const sus = sus0, cnt = { ok: 0, todo: 0, bad: 0 }; all.forEach(t => cnt[statusOf(t, sus)]++);
   $("#stats").innerHTML = `<div class="stat"><div class="l">Kilomètres ${cy}</div><div class="v">${fmt(totKm, 0)} km</div></div>
     <div class="stat"><div class="l">Indemnités ${cy}</div><div class="v">${eur(totEur)}</div></div>
-    <div class="stat"><div class="l">Trajets</div><div class="v">${list.length}</div>
-      <div class="legend" style="margin-top:6px">${cnt.ok ? `<span class="pill st-ok">${cnt.ok} validé(s)</span>` : ""}${cnt.todo ? `<span class="pill st-todo">${cnt.todo} à valider</span>` : ""}${cnt.bad ? `<span class="pill st-bad">${cnt.bad} suspect(s)</span>` : ""}</div></div>`;
+    <div class="stat"><div class="l">Trajets</div><div class="v">${all.length}</div>
+      <div class="legend" style="margin-top:6px">${[["bad", cnt.bad, "suspect(s)"], ["todo", cnt.todo, "à valider"], ["ok", cnt.ok, "validé(s)"]].filter(x => x[1])
+        .map(([k, n, l]) => `<button type="button" class="pill pill-btn st-${k}${histStatus === k ? " active" : ""}" data-stf="${k}" aria-pressed="${histStatus === k}" title="Afficher uniquement ces trajets">${n} ${l}</button>`).join("")}</div></div>`;
   $("#bulk").innerHTML = cnt.todo ? `<button class="btn" id="validateAll" type="button">Valider les ${cnt.todo} trajet(s) à valider</button>` : "";
-  if (cnt.todo) $("#validateAll").onclick = () => setValidated(list.filter(t => statusOf(t, sus) === "todo"), true);
+  if (cnt.todo) $("#validateAll").onclick = () => setValidated(all.filter(t => statusOf(t, sus) === "todo"), true);
   const perVeh = vehicles.filter(v => !vf || v.id === vf).map(v => { const d = tripsOf(cy, v.id).reduce((s, t) => s + t.km, 0); return { v, d, a: annualAmount(d, v) }; }).filter(x => x.d);
   $("#annual").innerHTML = perVeh.length ? `<table><thead><tr><th>Véhicule</th><th class="n">Km annuels</th><th class="n">Barème</th><th class="n">Montant</th></tr></thead><tbody>${
     perVeh.map(x => { const t = (x.v.elec ? bareme.electrique : bareme.voiture)[cvKey(x.v.cv)];
@@ -730,16 +741,22 @@ function renderHist(){
     $("#fVeh").value = $("#fVeh").value === r.dataset.vrow ? "" : r.dataset.vrow; renderHist();
     if ($("#fVeh").value) $("#tripsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  renderVehTools(vf, list);
+  renderVehTools(vf, all);
   renderOrphans();
-  $("#trips").innerHTML = list.length ? list.map(t => { const v = vehicles.find(x => x.id === t.vehId), st = statusOf(t, sus);
+  document.querySelectorAll("[data-stf]").forEach(b => b.onclick = () => {
+    histStatus = histStatus === b.dataset.stf ? "" : b.dataset.stf; renderHist();
+    if (histStatus) $("#tripsPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $("#trips").innerHTML = (histStatus ? `<div class="filter-note">${{ bad: "Trajets suspects", todo: "Trajets à valider", ok: "Trajets validés" }[histStatus]} : ${list.length} · <button type="button" class="linkbtn" id="stfClear">Afficher tous les trajets</button></div>` : "")
+    + (list.length ? list.map(t => { const v = vehicles.find(x => x.id === t.vehId), st = statusOf(t, sus);
     const act = st === "todo" ? `<button class="btn ghost mini" data-val="${t.id}" type="button">Valider</button>`
       : st === "ok" ? `<button class="btn danger" data-unval="${t.id}" type="button">Annuler validation</button>`
       : `<button class="btn ghost mini" data-goarb type="button">Arbitrer</button>`;
     return `<div class="trip${st === "bad" ? " bad" : ""}"><div class="r">${STATUS[st]} ${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
       <div class="m">${new Date(t.date).toLocaleDateString("fr-FR")} · ${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${vehPicker(t, v)}${t.motif ? " · " + esc(t.motif) : ""}</div>
       <div class="m" style="text-align:right">${eur(tripAmount(t))} ${act} ${t.validated ? `<span class="sub" title="Annulez la validation pour pouvoir supprimer">🔒</span>` : `<button class="btn danger" data-del="${t.id}" type="button">Suppr.</button>`}</div></div>`; }).join("")
-    : `<p class="sub">Aucun trajet pour cette sélection.</p>`;
+    : `<p class="sub">Aucun trajet pour cette sélection.</p>`);
+  if ($("#stfClear")) $("#stfClear").onclick = () => { histStatus = ""; renderHist(); };
   document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
     if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer"; b.dataset.confirm = "1"; return; }
     const id = b.dataset.del; if (trips.some(t => t.id === id && t.validated)){ toast("Trajet validé : annulez la validation avant de le supprimer.", true); return; }
@@ -793,6 +810,7 @@ function renderVehTools(vf, list){
   if ($("#delVehHere")) $("#delVehHere").onclick = () => { vehicles = vehicles.filter(x => x.id !== v.id); $("#fVeh").value = ""; saveAll(); renderVehicles(); renderHist(); sync.delVeh(v.id); toast("Véhicule supprimé."); };
   $("#allVeh").onclick = () => { $("#fVeh").value = ""; renderHist(); };
 }
+let histStatus = ""; // filtre de statut de l'Historique : "", "bad", "todo" ou "ok"
 /* Statut d'un trajet : suspect (rouge) si sa journée compte plusieurs trajets non arbitrés, sinon validé (vert) ou à valider (orange) */
 const STATUS = { ok: `<span class="pill st-ok">Validé</span>`, todo: `<span class="pill st-todo">À valider</span>`, bad: `<span class="pill st-bad">Suspect</span>` };
 function suspectIds(){ const s = new Set(); arbGroups().forEach(g => g.list.forEach(t => s.add(t.id))); return s; }

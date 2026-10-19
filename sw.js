@@ -1,5 +1,5 @@
 // Service worker : réseau d'abord en revalidant toujours (jamais de version périmée), cache en secours hors connexion
-const CACHE = "frais-km-v21";
+const CACHE = "frais-km-v22";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./logo.png", "./icon-192.png", "./icon-512.png"];
 self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES.map(f => new Request(f, { cache: "reload" }))))); });
 self.addEventListener("activate", e => e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())));
