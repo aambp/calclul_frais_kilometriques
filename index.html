@@ -650,8 +650,8 @@ $("#barApply").onclick = () => {
 $("#barReset").onclick = () => { bareme = BAREME_DEFAUT; LS.set("bareme", null); sync.settings(); renderBareme(); $("#barMsg").textContent = "Barème intégré rétabli."; };
 
 /* ===== Base de données Supabase (tables fk_*) ===== */
-const SB_URL = "https://dmzopvuxeclezrrrjksx.supabase.co";
-const SB_KEY = "sb_publishable_WW_lNV3q3zPgHduU7lJfFA_JtKDDIPJ";
+const SB_URL = "https://jwfcvgkrpevxxuxazhcy.supabase.co";
+const SB_KEY = "sb_publishable_a1XkSjyDqJmqeug31yFccg_CuAyRrNq";
 let sb = null, session = null;
 try{ sb = window.supabase.createClient(SB_URL, SB_KEY); }catch(e){}
 let toastT;
