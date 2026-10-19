@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Frais Km</title>
+<meta name="theme-color" content="#1d4f9c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+/* Layout : appli mobile-first, une colonne, onglets en bas façon panneau routier */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --ink:#18202e; --muted:#5c6779; --line:#d9dfe8;
+  --accent:#1d4f9c; --accent-ink:#ffffff; --accent-soft:#e3ebf8; --ok:#1f7a4d; --warn:#b5541c;
+  --f-display:"Barlow Condensed","Arial Narrow",sans-serif; --f-body:"Barlow",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#10141c; --surface:#181e29; --ink:#e7ebf2; --muted:#9aa5b8; --line:#2a3342;
+  --accent:#5b8ee0; --accent-ink:#0c1220; --accent-soft:#1d2a40; --ok:#4cc28a; --warn:#e88a55; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);
+  padding:env(safe-area-inset-top,0) max(16px,env(safe-area-inset-right,0px)) calc(88px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.wrap{max-width:720px;margin:0 auto}
+header{display:flex;align-items:baseline;justify-content:space-between;padding-block:18px 10px}
+h1{font:700 1.9rem/1 var(--f-display);letter-spacing:.01em;margin:0}
+h1 span{background:var(--accent);color:var(--accent-ink);padding:2px 8px;border-radius:4px;margin-left:4px}
+h2{font:600 1.3rem/1.1 var(--f-display);margin:0 0 10px;text-wrap:balance}
+.sub{color:var(--muted);font-size:.85rem}
+section[data-tab]{display:grid;gap:14px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px}
+label{display:grid;gap:4px;font-size:.78rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+input,select{font:500 1rem var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:11px 12px;width:100%;min-width:0}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ac{position:relative}
+.ac ul{position:absolute;z-index:1000;left:0;right:0;top:100%;margin:4px 0 0;padding:4px;list-style:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgb(0 0 0/.15)}
+.ac li{padding:8px 10px;border-radius:6px;cursor:pointer;font-size:.92rem;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:500}
+.ac li:hover,.ac li.on{background:var(--accent-soft)}
+.ac li.info{cursor:default;color:var(--muted);background:none}
+.ac li.info.err{color:var(--warn)}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:3px}
+.seg button{border:0;background:none;padding:9px;border-radius:6px;font:600 .95rem var(--f-body);color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.btn{border:0;background:var(--accent);color:var(--accent-ink);font:600 1rem var(--f-body);padding:12px 16px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:var(--accent-soft);color:var(--accent)}
+.btn.danger{background:none;color:var(--warn);padding:6px 8px}
+.btn:disabled{opacity:.5;cursor:default}
+#map{height:240px;border-radius:8px;border:1px solid var(--line);z-index:0}
+.routes{display:grid;gap:6px}
+.route{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:var(--bg)}
+.route.on{border-color:var(--accent);background:var(--accent-soft)}
+.route b{font:700 1.25rem var(--f-display);font-variant-numeric:tabular-nums}
+.tag{font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:2px 6px;border-radius:4px;background:var(--accent);color:var(--accent-ink)}
+.total{display:flex;justify-content:space-between;align-items:end;gap:12px;padding-top:4px;border-top:1px dashed var(--line)}
+.big{font:700 2.3rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.big small{font-size:1rem;color:var(--muted);margin-left:2px}
+.msg{font-size:.88rem;color:var(--muted)} .msg.err{color:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:tabular-nums}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:6px 6px;border-bottom:1px solid var(--line)}
+td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right}
+.scroll{overflow-x:auto}
+.trip{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.trip:last-child{border-bottom:0}
+.trip .r{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.trip .k{font:700 1.2rem var(--f-display);text-align:right;font-variant-numeric:tabular-nums}
+.trip .m{font-size:.82rem;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.stat .l{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.stat .v{font:700 1.6rem/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.plate{display:inline-block;font:700 .8rem var(--f-display);border:1.5px solid var(--ink);border-radius:4px;padding:0 6px;letter-spacing:.05em}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:1100}
+nav button{border:0;background:none;font:600 .82rem var(--f-body);color:var(--muted);padding:10px 4px;border-radius:8px;cursor:pointer}
+nav button.on{color:var(--accent);background:var(--accent-soft)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:-4px}
+.chips button{border:1px solid var(--line);background:var(--bg);color:var(--ink);font:500 .82rem var(--f-body);padding:5px 10px;border-radius:999px;cursor:pointer}
+.chips button:hover{border-color:var(--accent);color:var(--accent)}
+.swap{justify-self:center;padding:6px 14px;font-size:.88rem}
+.check{display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:.95rem;color:var(--ink);font-weight:500}
+.check input{width:auto}
+@media (max-width:420px){.row{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>Frais <span>KM</span></h1><span class="sub" id="yearLbl"></span></header>
+
+<!-- NOUVEAU TRAJET -->
+<section data-tab="new">
+  <div class="panel">
+    <div class="row">
+      <label>Date<input type="date" id="date"></label>
+      <label>Véhicule<select id="veh"></select></label>
+    </div>
+    <label class="ac">Départ<input id="from" autocomplete="off" placeholder="Adresse, ville…"><ul hidden></ul></label>
+    <div class="chips" data-for="from"></div>
+    <button class="btn ghost swap" id="swap" type="button" aria-label="Inverser départ et arrivée">⇅ Inverser</button>
+    <label class="ac">Arrivée<input id="to" autocomplete="off" placeholder="Adresse, ville…"><ul hidden></ul></label>
+    <div class="chips" data-for="to"></div>
+    <label>Motif<input id="motif" placeholder="Ex. réunion client BPI France"></label>
+    <div class="seg" id="segTrip"><button data-v="1" class="on" type="button">Aller simple</button><button data-v="2" type="button">Aller-retour</button></div>
+    <button class="btn" id="calc" type="button">Calculer l'itinéraire</button>
+    <div class="msg" id="calcMsg"></div>
+  </div>
+
+  <div class="panel" id="resPanel" hidden>
+    <div id="map"></div>
+    <div class="routes" id="routes"></div>
+    <label>Distance aller retenue (km, modifiable)<input type="number" id="kmOne" step="0.1" min="0" inputmode="decimal"></label>
+    <div class="total">
+      <div><div class="sub" id="totLbl">Total</div><div class="big" id="kmTot">0<small>km</small></div></div>
+      <div style="text-align:right"><div class="sub">Indemnité estimée</div><div class="big" id="eurTot">0<small>€</small></div></div>
+    </div>
+    <button class="btn" id="save" type="button">Enregistrer le trajet</button>
+  </div>
+</section>
+
+<!-- HISTORIQUE -->
+<section data-tab="hist" hidden>
+  <div class="panel">
+    <div class="row">
+      <label>Année<select id="fYear"></select></label>
+      <label>Véhicule<select id="fVeh"></select></label>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="scroll" id="annual"></div>
+    <div class="row"><button class="btn ghost" id="csv" type="button">Exporter CSV</button><button class="btn ghost" id="backup" type="button">Sauvegarde JSON</button></div>
+    <label>Restaurer une sauvegarde<input type="file" id="restore" accept="application/json"></label>
+  </div>
+  <div class="panel"><h2>Trajets</h2><div id="trips"></div></div>
+</section>
+
+<!-- VÉHICULES -->
+<section data-tab="veh" hidden>
+  <div class="panel">
+    <h2>Adresses par défaut</h2>
+    <p class="sub" style="margin:0">Pré-remplies à chaque nouveau trajet (Domicile → Bureau). Modifiables trajet par trajet.</p>
+    <label>Domicile<input id="pHome"></label>
+    <label>Bureau<input id="pWork"></label>
+    <button class="btn ghost" id="pSave" type="button">Enregistrer les adresses</button>
+    <div class="msg" id="pMsg"></div>
+  </div>
+  <div class="panel">
+    <h2>Ajouter un véhicule</h2>
+    <label>Nom<input id="vName" placeholder="Ex. Peugeot 308"></label>
+    <div class="row">
+      <label>Puissance fiscale (CV, carte grise P.6)<input type="number" id="vCv" min="1" max="50" value="5" inputmode="numeric"></label>
+      <label>Immatriculation (option)<input id="vPlate" placeholder="AB-123-CD"></label>
+    </div>
+    <label class="check"><input type="checkbox" id="vElec"> 100 % électrique (barème majoré de 20 %)</label>
+    <button class="btn" id="vAdd" type="button">Ajouter</button>
+  </div>
+  <div class="panel"><h2>Mes véhicules</h2><div id="vList"></div></div>
+</section>
+
+<!-- BARÈME -->
+<section data-tab="bar" hidden>
+  <div class="panel">
+    <h2 id="barTitle"></h2>
+    <p class="sub" id="barSrc" style="margin:0"></p>
+    <div class="scroll" id="barTable"></div>
+    <div class="scroll" id="barTableE"></div>
+    <p class="sub" style="margin:0">d = distance professionnelle annuelle parcourue avec le véhicule. Au-delà de 7 CV, la ligne « 7 CV et plus » s'applique.</p>
+  </div>
+  <div class="panel">
+    <h2>Mettre à jour le barème</h2>
+    <p class="sub" style="margin:0">Le barème change par arrêté (en général au printemps). Collez ici un barème JSON de même structure pour le remplacer.</p>
+    <label>Barème JSON<textarea id="barJson" rows="6" style="font:13px ui-monospace,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;width:100%"></textarea></label>
+    <div class="row"><button class="btn ghost" id="barApply" type="button">Appliquer</button><button class="btn ghost" id="barReset" type="button">Revenir au barème intégré</button></div>
+    <div class="msg" id="barMsg"></div>
+  </div>
+</section>
+</div>
+
+<nav>
+  <button data-go="new" class="on" type="button">Trajet</button>
+  <button data-go="hist" type="button">Historique</button>
+  <button data-go="veh" type="button">Réglages</button>
+  <button data-go="bar" type="button">Barème</button>
+</nav>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===== Barème fiscal intégré =====
+   Barème 2026 (revenus 2025), reconduit à l'identique depuis 2023 — arrêté du 16/02/2026.
+   Tranches : [jusqu'à 5 000 km : d×a] [5 001–20 000 km : d×b + c] [> 20 000 km : d×e] */
+const BAREME_DEFAUT = {
+  annee: 2026,
+  source: "Barème kilométrique 2026 (revenus 2025), identique à 2023-2025 — impots.gouv.fr / BOFiP",
+  voiture: {
+    "3": [0.529, 0.316, 1065, 0.370],
+    "4": [0.606, 0.340, 1330, 0.407],
+    "5": [0.636, 0.357, 1395, 0.427],
+    "6": [0.665, 0.374, 1457, 0.447],
+    "7": [0.697, 0.394, 1515, 0.470]
+  },
+  electrique: {
+    "3": [0.635, 0.379, 1278, 0.444],
+    "4": [0.727, 0.408, 1596, 0.488],
+    "5": [0.763, 0.428, 1674, 0.512],
+    "6": [0.798, 0.449, 1748, 0.536],
+    "7": [0.836, 0.473, 1818, 0.564]
+  }
+};
+
+/* ===== Stockage local ===== */
+const LS = { get(k, d){ try{ const v = localStorage.getItem("fkm_"+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+             set(k, v){ try{ localStorage.setItem("fkm_"+k, JSON.stringify(v)); }catch(e){} } };
+let vehicles = LS.get("vehicles", []);
+let trips = LS.get("trips", []);
+let bareme = LS.get("bareme", null) || BAREME_DEFAUT;
+const saveAll = () => { LS.set("vehicles", vehicles); LS.set("trips", trips); };
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const $ = s => document.querySelector(s);
+const fmt = (n, d = 1) => n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const eur = n => n.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+
+/* ===== Calcul barème ===== */
+function cvKey(cv){ cv = Math.round(+cv || 0); return String(Math.min(7, Math.max(3, cv))); }
+function annualAmount(d, veh){
+  if (!veh || d <= 0) return 0;
+  const t = (veh.elec ? bareme.electrique : bareme.voiture)[cvKey(veh.cv)];
+  if (!t) return 0;
+  if (d <= 5000) return d * t[0];
+  if (d <= 20000) return d * t[1] + t[2];
+  return d * t[3];
+}
+function tripsOf(year, vehId){ return trips.filter(t => t.date.slice(0,4) === String(year) && (!vehId || t.vehId === vehId)); }
+/* Indemnité d'un trajet = part au prorata du montant annuel du véhicule (seule méthode juste vu les tranches) */
+function tripAmount(t){
+  const veh = vehicles.find(v => v.id === t.vehId);
+  const ys = tripsOf(t.date.slice(0,4), t.vehId);
+  const d = ys.reduce((s, x) => s + x.km, 0);
+  return d ? annualAmount(d, veh) * t.km / d : 0;
+}
+/* Estimation avant enregistrement : différence de montant annuel apportée par ce trajet */
+function marginalAmount(km, vehId, date){
+  const veh = vehicles.find(v => v.id === vehId);
+  const d = tripsOf(date.slice(0,4), vehId).reduce((s, x) => s + x.km, 0);
+  return annualAmount(d + km, veh) - annualAmount(d, veh);
+}
+
+/* ===== Onglets ===== */
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll("section[data-tab]").forEach(s => s.hidden = s.dataset.tab !== b.dataset.go);
+  if (b.dataset.go === "hist") renderHist();
+  if (b.dataset.go === "new" && map) setTimeout(() => map.invalidateSize(), 50);
+  window.scrollTo(0, 0);
+});
+
+/* ===== Véhicules ===== */
+function renderVehicles(){
+  const opts = vehicles.map(v => `<option value="${v.id}">${esc(v.name)} — ${v.cv} CV${v.elec ? " ⚡" : ""}</option>`).join("");
+  const cur = $("#veh").value;
+  $("#veh").innerHTML = opts || `<option value="">Ajoutez un véhicule</option>`;
+  if (vehicles.some(v => v.id === cur)) $("#veh").value = cur;
+  $("#fVeh").innerHTML = `<option value="">Tous</option>` + opts;
+  $("#vList").innerHTML = vehicles.length ? vehicles.map(v => `
+    <div class="trip"><div class="r">${esc(v.name)} ${v.plate ? `<span class="plate">${esc(v.plate)}</span>` : ""}
+      <div class="m">${v.cv} CV fiscaux · ligne « ${cvKey(v.cv) === "7" ? "7 CV et plus" : cvKey(v.cv) === "3" ? "3 CV et moins" : cvKey(v.cv)+" CV"} »${v.elec ? " · électrique +20 %" : ""}</div></div>
+      <button class="btn danger" data-del-veh="${v.id}" type="button">Supprimer</button></div>`).join("")
+    : `<p class="sub">Aucun véhicule. Ajoutez-en un pour calculer les indemnités.</p>`;
+  document.querySelectorAll("[data-del-veh]").forEach(b => b.onclick = () => {
+    const id = b.dataset.delVeh;
+    if (trips.some(t => t.vehId === id) && b.dataset.confirm !== "1"){ b.textContent = "Trajets liés : confirmer ?"; b.dataset.confirm = "1"; return; }
+    vehicles = vehicles.filter(v => v.id !== id); saveAll(); renderVehicles(); updateTotal();
+  });
+}
+$("#vAdd").onclick = () => {
+  const name = $("#vName").value.trim(), cv = parseInt($("#vCv").value, 10);
+  if (!name || !cv) return;
+  vehicles.push({ id: uid(), name, cv, elec: $("#vElec").checked, plate: $("#vPlate").value.trim().toUpperCase() });
+  saveAll(); $("#vName").value = ""; $("#vPlate").value = ""; $("#vElec").checked = false; renderVehicles();
+};
+
+/* ===== Autocomplétion adresses (Géoplateforme IGN / BAN, repli Nominatim) ===== */
+const points = { from: null, to: null };
+/* Renvoie un tableau d'adresses, ou null si aucun service n'a répondu */
+async function geocode(q){
+  let reached = false;
+  const ban = async url => {
+    const r = await fetch(url + encodeURIComponent(q)); reached = true;
+    const j = await r.json();
+    return (j.features || []).map(f => ({ label: f.properties.label, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
+  };
+  for (const url of ["https://data.geopf.fr/geocodage/search?limit=6&autocomplete=1&q=", "https://api-adresse.data.gouv.fr/search/?limit=6&autocomplete=1&q="]){
+    try{ const res = await ban(url); if (res.length) return res; }catch(e){}
+  }
+  try{
+    const r = await fetch("https://nominatim.openstreetmap.org/search?format=json&countrycodes=fr&limit=6&q=" + encodeURIComponent(q)); reached = true;
+    const j = await r.json();
+    return j.map(x => ({ label: x.display_name, lon: +x.lon, lat: +x.lat }));
+  }catch(e){ return reached ? [] : null; }
+}
+function setupAC(id){
+  const inp = $("#" + id), ul = inp.nextElementSibling; let timer, items = [], idx = -1;
+  const pick = it => { points[id] = it; inp.value = it.label; ul.hidden = true; };
+  inp.addEventListener("input", () => {
+    points[id] = null; clearTimeout(timer);
+    const q = inp.value.trim(); if (q.length < 3){ ul.hidden = true; return; }
+    ul.innerHTML = `<li class="info">Recherche…</li>`; ul.hidden = false;
+    timer = setTimeout(async () => {
+      const res = await geocode(q); idx = -1;
+      if (inp.value.trim() !== q) return; // la saisie a changé entre-temps
+      if (res === null){ items = []; ul.innerHTML = `<li class="info err">Service d'adresses injoignable. Ouvrez l'appli depuis Netlify ou un navigateur (pas l'aperçu Claude).</li>`; return; }
+      items = res;
+      ul.innerHTML = items.length ? items.map((it, i) => `<li data-i="${i}">${esc(it.label)}</li>`).join("") : `<li class="info">Aucune adresse trouvée.</li>`;
+      ul.querySelectorAll("li[data-i]").forEach(li => li.onmousedown = e => { e.preventDefault(); pick(items[+li.dataset.i]); });
+    }, 300);
+  });
+  inp.addEventListener("keydown", e => {
+    if (ul.hidden || !items.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp"){ e.preventDefault(); idx = (idx + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      ul.querySelectorAll("li").forEach((li, i) => li.classList.toggle("on", i === idx)); }
+    if (e.key === "Enter" && idx >= 0){ e.preventDefault(); pick(items[idx]); }
+  });
+  inp.addEventListener("blur", () => setTimeout(() => ul.hidden = true, 150));
+}
+setupAC("from"); setupAC("to");
+
+/* ===== Adresses par défaut (Domicile / Bureau) ===== */
+const PLACES_DEFAUT = { home: "18 avenue de Provence, 91940 Les Ulis", work: "Bpifrance, 27-31 avenue du Général Leclerc, 94700 Maisons-Alfort" };
+let places = Object.assign({}, PLACES_DEFAUT, LS.get("places", {}));
+/* Pour géocoder, on retire un éventuel nom d'organisme placé avant la première virgule s'il ne contient pas de chiffre */
+const geoText = s => { const p = s.split(","); return p.length > 2 && !/\d/.test(p[0]) ? p.slice(1).join(",").trim() : s; };
+function setPlace(id, addr){ $("#" + id).value = addr; points[id] = null; }
+function applyDefaults(){ setPlace("from", places.home); setPlace("to", places.work); }
+function renderChips(){
+  document.querySelectorAll(".chips").forEach(c => {
+    c.innerHTML = `<button type="button" data-a="home">Domicile</button><button type="button" data-a="work">Bureau</button>`;
+    c.querySelectorAll("button").forEach(b => b.onclick = () => setPlace(c.dataset.for, places[b.dataset.a]));
+  });
+  $("#pHome").value = places.home; $("#pWork").value = places.work;
+}
+$("#swap").onclick = () => {
+  const f = $("#from").value, t = $("#to").value, pf = points.from;
+  $("#from").value = t; $("#to").value = f; points.from = points.to; points.to = pf;
+};
+$("#pSave").onclick = () => {
+  places = { home: $("#pHome").value.trim() || PLACES_DEFAUT.home, work: $("#pWork").value.trim() || PLACES_DEFAUT.work };
+  LS.set("places", places); renderChips(); applyDefaults();
+  $("#pMsg").textContent = "Adresses enregistrées.";
+};
+/* Un champ rempli sans choix dans la liste (adresse par défaut, saisie libre) est géocodé au moment du calcul */
+async function resolvePoint(id){
+  if (points[id]) return true;
+  const txt = $("#" + id).value.trim(); if (!txt) return false;
+  const res = await geocode(geoText(txt));
+  if (res && res.length){ points[id] = res[0]; return true; }
+  return false;
+}
+
+/* ===== Itinéraires (OSRM, avec alternatives) ===== */
+let map, layers = [], routes = [], sel = 0, factor = 1;
+const COLORS = ["#1d4f9c", "#b5541c", "#1f7a4d", "#7a3fa0"];
+function drawMap(){
+  if (!window.L) return;
+  if (!map){
+    map = L.map("map", { zoomControl: true });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 18, attribution: "© OpenStreetMap" }).addTo(map);
+  }
+  layers.forEach(l => map.removeLayer(l)); layers = [];
+  routes.forEach((r, i) => {
+    const ll = r.geometry.coordinates.map(c => [c[1], c[0]]);
+    const pl = L.polyline(ll, { color: COLORS[i % 4], weight: i === sel ? 6 : 3, opacity: i === sel ? .95 : .45 }).addTo(map);
+    pl.on("click", () => selectRoute(i)); layers.push(pl);
+  });
+  layers.push(L.circleMarker([points.from.lat, points.from.lon], { radius: 7, color: "#1f7a4d", fillOpacity: 1 }).addTo(map));
+  layers.push(L.circleMarker([points.to.lat, points.to.lon], { radius: 7, color: "#b5541c", fillOpacity: 1 }).addTo(map));
+  layers[sel] && layers[sel].bringToFront();
+  map.fitBounds(L.featureGroup(layers).getBounds(), { padding: [20, 20] });
+}
+function renderRoutes(){
+  const maxKm = Math.max(...routes.map(r => r.distance));
+  $("#routes").innerHTML = routes.map((r, i) => {
+    const km = r.distance / 1000, min = Math.round(r.duration / 60);
+    const tags = [r.distance === maxKm ? "Plus long" : "", i === 0 ? "Recommandé" : ""].filter(Boolean).map(t => `<span class="tag">${t}</span>`).join(" ");
+    return `<div class="route ${i === sel ? "on" : ""}" data-i="${i}" role="button" tabindex="0">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${COLORS[i % 4]};margin-right:6px"></span>Itinéraire ${i + 1} · ${Math.floor(min / 60) ? Math.floor(min / 60) + " h " : ""}${min % 60} min ${tags}</span>
+      <b>${fmt(km)} km</b></div>`;
+  }).join("");
+  document.querySelectorAll(".route").forEach(el => { el.onclick = () => selectRoute(+el.dataset.i); el.onkeydown = e => { if (e.key === "Enter") selectRoute(+el.dataset.i); }; });
+}
+function selectRoute(i){ sel = i; $("#kmOne").value = (routes[i].distance / 1000).toFixed(1); renderRoutes(); drawMap(); updateTotal(); }
+$("#calc").onclick = async () => {
+  const msg = $("#calcMsg"); msg.className = "msg";
+  msg.textContent = "Calcul en cours…"; $("#calc").disabled = true;
+  try{
+    const okF = await resolvePoint("from"), okT = await resolvePoint("to");
+    if (!okF || !okT) throw new Error(`adresse ${!okF ? "de départ" : "d'arrivée"} introuvable, choisissez-la dans la liste`);
+    const u = `https://router.project-osrm.org/route/v1/driving/${points.from.lon},${points.from.lat};${points.to.lon},${points.to.lat}?alternatives=3&overview=full&geometries=geojson`;
+    const j = await (await fetch(u)).json();
+    if (j.code !== "Ok" || !j.routes.length) throw new Error(j.message || "Aucun itinéraire");
+    routes = j.routes;
+    sel = routes.reduce((b, r, i) => r.distance > routes[b].distance ? i : b, 0); // le plus long par défaut
+    $("#resPanel").hidden = false; msg.textContent = routes.length > 1 ? `${routes.length} itinéraires trouvés. Le plus long est présélectionné.` : "Un seul itinéraire trouvé.";
+    selectRoute(sel);
+  }catch(e){
+    msg.textContent = "Le calcul a échoué (" + e.message + "). Saisissez la distance à la main ci-dessous."; msg.className = "msg err";
+    routes = []; $("#routes").innerHTML = ""; $("#resPanel").hidden = false;
+  }finally{ $("#calc").disabled = false; }
+};
+
+/* ===== Aller simple / aller-retour + total ===== */
+document.querySelectorAll("#segTrip button").forEach(b => b.onclick = () => {
+  factor = +b.dataset.v; document.querySelectorAll("#segTrip button").forEach(x => x.classList.toggle("on", x === b)); updateTotal();
+});
+$("#kmOne").oninput = updateTotal;
+["#veh", "#date"].forEach(s => $(s).onchange = updateTotal);
+function updateTotal(){
+  const km = (parseFloat($("#kmOne").value) || 0) * factor;
+  $("#totLbl").textContent = factor === 2 ? "Total aller-retour" : "Total aller simple";
+  $("#kmTot").innerHTML = fmt(km) + "<small>km</small>";
+  $("#eurTot").innerHTML = fmt(marginalAmount(km, $("#veh").value, $("#date").value || today()), 2) + "<small>€</small>";
+}
+
+/* ===== Enregistrer ===== */
+const today = () => new Date().toISOString().slice(0, 10);
+$("#save").onclick = () => {
+  const one = parseFloat($("#kmOne").value) || 0, msg = $("#calcMsg");
+  if (!vehicles.length || !$("#veh").value){ msg.textContent = "Ajoutez d'abord un véhicule (onglet Véhicules)."; msg.className = "msg err"; return; }
+  if (one <= 0){ msg.textContent = "Distance manquante."; msg.className = "msg err"; return; }
+  trips.push({ id: uid(), date: $("#date").value || today(), from: $("#from").value, to: $("#to").value, motif: $("#motif").value.trim(),
+               kmOne: Math.round(one * 10) / 10, roundTrip: factor === 2, km: Math.round(one * factor * 10) / 10, vehId: $("#veh").value });
+  saveAll();
+  msg.textContent = `Trajet enregistré : ${fmt(one * factor)} km.`; msg.className = "msg";
+  applyDefaults(); $("#motif").value = ""; $("#resPanel").hidden = true; $("#kmOne").value = "";
+};
+
+/* ===== Historique & synthèse annuelle ===== */
+function renderHist(){
+  const years = [...new Set(trips.map(t => t.date.slice(0, 4)).concat(String(new Date().getFullYear())))].sort().reverse();
+  const cy = $("#fYear").value || years[0];
+  $("#fYear").innerHTML = years.map(y => `<option ${y === cy ? "selected" : ""}>${y}</option>`).join("");
+  const vf = $("#fVeh").value, list = tripsOf(cy, vf).sort((a, b) => b.date.localeCompare(a.date));
+  const totKm = list.reduce((s, t) => s + t.km, 0), totEur = list.reduce((s, t) => s + tripAmount(t), 0);
+  $("#stats").innerHTML = `<div class="stat"><div class="l">Kilomètres ${cy}</div><div class="v">${fmt(totKm, 0)} km</div></div>
+    <div class="stat"><div class="l">Indemnités ${cy}</div><div class="v">${eur(totEur)}</div></div>
+    <div class="stat"><div class="l">Trajets</div><div class="v">${list.length}</div></div>`;
+  const perVeh = vehicles.filter(v => !vf || v.id === vf).map(v => { const d = tripsOf(cy, v.id).reduce((s, t) => s + t.km, 0); return { v, d, a: annualAmount(d, v) }; }).filter(x => x.d);
+  $("#annual").innerHTML = perVeh.length ? `<table><thead><tr><th>Véhicule</th><th class="n">Km annuels</th><th class="n">Barème</th><th class="n">Montant</th></tr></thead><tbody>${
+    perVeh.map(x => { const t = (x.v.elec ? bareme.electrique : bareme.voiture)[cvKey(x.v.cv)];
+      const f = x.d <= 5000 ? `d × ${t[0]}` : x.d <= 20000 ? `d × ${t[1]} + ${t[2]}` : `d × ${t[3]}`;
+      return `<tr><td>${esc(x.v.name)}</td><td class="n">${fmt(x.d)}</td><td class="n">${f}</td><td class="n">${eur(x.a)}</td></tr>`; }).join("")}</tbody></table>` : "";
+  $("#trips").innerHTML = list.length ? list.map(t => { const v = vehicles.find(x => x.id === t.vehId);
+    return `<div class="trip"><div class="r">${esc(short(t.from))} → ${esc(short(t.to))}</div><div class="k">${fmt(t.km)} km</div>
+      <div class="m">${new Date(t.date).toLocaleDateString("fr-FR")} · ${t.roundTrip ? "Aller-retour" : "Aller simple"} · ${esc(v ? v.name : "véhicule supprimé")}${t.motif ? " · " + esc(t.motif) : ""}</div>
+      <div class="m" style="text-align:right">${eur(tripAmount(t))} <button class="btn danger" data-del="${t.id}" type="button">Suppr.</button></div></div>`; }).join("")
+    : `<p class="sub">Aucun trajet pour cette sélection.</p>`;
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    if (b.dataset.confirm !== "1"){ b.textContent = "Confirmer"; b.dataset.confirm = "1"; return; }
+    trips = trips.filter(t => t.id !== b.dataset.del); saveAll(); renderHist();
+  });
+}
+const short = s => (s || "—").split(",").slice(0, 2).join(",");
+$("#fYear").onchange = renderHist; $("#fVeh").onchange = renderHist;
+
+/* ===== Export / sauvegarde ===== */
+function download(name, text, type){ const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+$("#csv").onclick = () => {
+  const y = $("#fYear").value, vf = $("#fVeh").value;
+  const rows = [["Date", "Départ", "Arrivée", "Motif", "Type", "Km aller", "Km total", "Véhicule", "CV", "Électrique", "Indemnité (€)"]];
+  tripsOf(y, vf).sort((a, b) => a.date.localeCompare(b.date)).forEach(t => { const v = vehicles.find(x => x.id === t.vehId) || {};
+    rows.push([t.date, t.from, t.to, t.motif, t.roundTrip ? "AR" : "Aller", String(t.kmOne).replace(".", ","), String(t.km).replace(".", ","), v.name || "", v.cv || "", v.elec ? "Oui" : "Non", tripAmount(t).toFixed(2).replace(".", ",")]); });
+  download(`frais-km-${y}.csv`, "﻿" + rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(";")).join("\n"), "text/csv");
+};
+$("#backup").onclick = () => download(`frais-km-sauvegarde-${today()}.json`, JSON.stringify({ vehicles, trips }, null, 1), "application/json");
+$("#restore").onchange = async e => {
+  try{ const j = JSON.parse(await e.target.files[0].text()); if (Array.isArray(j.vehicles) && Array.isArray(j.trips)){ vehicles = j.vehicles; trips = j.trips; saveAll(); renderVehicles(); renderHist(); } }catch(err){}
+  e.target.value = "";
+};
+
+/* ===== Onglet barème ===== */
+function renderBareme(){
+  $("#yearLbl").textContent = "Barème " + bareme.annee;
+  $("#barTitle").textContent = "Barème kilométrique " + bareme.annee;
+  $("#barSrc").textContent = bareme.source;
+  const tbl = (t, title) => `<table><thead><tr><th>${title}</th><th class="n">≤ 5 000 km</th><th class="n">5 001 – 20 000 km</th><th class="n">&gt; 20 000 km</th></tr></thead><tbody>${
+    Object.entries(t).map(([k, r]) => `<tr><td>${k === "3" ? "3 CV et moins" : k === "7" ? "7 CV et plus" : k + " CV"}</td><td class="n">d × ${r[0]}</td><td class="n">d × ${r[1]} + ${r[2].toLocaleString("fr-FR")}</td><td class="n">d × ${r[3]}</td></tr>`).join("")}</tbody></table>`;
+  $("#barTable").innerHTML = tbl(bareme.voiture, "Voitures");
+  $("#barTableE").innerHTML = tbl(bareme.electrique, "Voitures 100 % électriques");
+  $("#barJson").value = JSON.stringify(bareme, null, 1);
+}
+$("#barApply").onclick = () => {
+  try{ const b = JSON.parse($("#barJson").value);
+    if (!b.voiture || !b.electrique || !b.voiture["5"] || b.voiture["5"].length !== 4) throw new Error("structure");
+    bareme = b; LS.set("bareme", b); renderBareme(); $("#barMsg").textContent = "Barème appliqué."; $("#barMsg").className = "msg";
+  }catch(e){ $("#barMsg").textContent = "JSON invalide : gardez la structure voiture / electrique avec 4 valeurs par ligne."; $("#barMsg").className = "msg err"; }
+};
+$("#barReset").onclick = () => { bareme = BAREME_DEFAUT; LS.set("bareme", null); renderBareme(); $("#barMsg").textContent = "Barème intégré rétabli."; };
+
+/* ===== Init ===== */
+$("#date").value = today();
+renderVehicles(); renderBareme(); renderChips(); applyDefaults(); updateTotal();
+</script>
+</body>
+</html>
