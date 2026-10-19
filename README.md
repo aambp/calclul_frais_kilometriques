@@ -1,17 +1,32 @@
-# Frais KM
+# Frais KM — AMN CONSEIL
 
-Appli web (un seul fichier `index.html`) de suivi des frais kilométriques.
+Application web gratuite de suivi des frais kilométriques.
+
+**Utiliser l'application :** https://aambp.github.io/calclul_frais_kilometriques/ — créez votre compte gratuitement.
+
+## Fonctionnalités
 
 - Trajets avec départ / arrivée (autocomplétion IGN / BAN, repli Nominatim)
 - Calcul d'itinéraire OSRM avec alternatives, le plus long présélectionné
 - Aller simple ou aller-retour, distance modifiable
-- Adresses par défaut Domicile → Bureau, modifiables dans Réglages
+- Adresses Domicile / Bureau pré-remplies, propres à chaque utilisateur
 - Véhicules avec CV fiscaux et option 100 % électrique
-- Barème kilométrique 2026 intégré (modifiable via JSON), calcul par tranche annuelle
-- Historique, synthèse annuelle, export CSV, sauvegarde / restauration JSON
+- Barème kilométrique fiscal 2026 intégré, calcul par tranche annuelle
+- Historique, synthèse annuelle, export CSV
+- Import CSV (export de l'appli ou d'outils de notes de frais) et sauvegarde JSON
+- Comptes individuels, données privées et synchronisées (Supabase, RLS)
+- Installable sur ordinateur et téléphone
 
-## Déploiement
+## Propriété et licence
 
-Site statique : connecter ce dépôt à Netlify (aucune commande de build, dossier de publication `/`).
+© 2026 AMN CONSEIL. Tous droits réservés. L'application est la propriété d'AMN CONSEIL ;
+son **utilisation gratuite est autorisée**. Le code source est consultable mais ne peut être
+copié, modifié ni redistribué sans accord écrit. Voir [LICENSE](LICENSE).
 
-Les données sont stockées dans le navigateur (localStorage). Faire une sauvegarde JSON régulièrement.
+## Technique
+
+- Fichier unique `index.html` (HTML/CSS/JS, sans build), Leaflet, supabase-js
+- Base : Supabase, schéma dans [`supabase/schema.sql`](supabase/schema.sql)
+- Hébergement : GitHub Pages (branche `main`, racine)
+
+Contact : aam@amn-conseil.fr

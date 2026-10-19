@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Frais Km</title>
-<meta name="theme-color" content="#1d4f9c">
+<meta name="theme-color" content="#0879c4">
+<meta name="description" content="Suivi des frais kilométriques avec calcul d'itinéraire et barème fiscal. Gratuit, par AMN CONSEIL.">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Frais KM">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,14 +17,14 @@
 <style>
 /* Layout : appli mobile-first, une colonne, onglets en bas façon panneau routier */
 :root{
-  --bg:#f3f5f9; --surface:#ffffff; --ink:#18202e; --muted:#5c6779; --line:#d9dfe8;
-  --accent:#1d4f9c; --accent-ink:#ffffff; --accent-soft:#e3ebf8; --ok:#1f7a4d; --warn:#b5541c;
+  --bg:#f3f6f9; --surface:#ffffff; --ink:#1f2328; --muted:#5d6670; --line:#d8dee5;
+  --accent:#0879c4; --accent-ink:#ffffff; --accent-soft:#e1f0fa; --ok:#1f7a4d; --warn:#b5541c;
   --f-display:"Barlow Condensed","Arial Narrow",sans-serif; --f-body:"Barlow",system-ui,sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#10141c; --surface:#181e29; --ink:#e7ebf2; --muted:#9aa5b8; --line:#2a3342;
-  --accent:#5b8ee0; --accent-ink:#0c1220; --accent-soft:#1d2a40; --ok:#4cc28a; --warn:#e88a55; color-scheme:dark}}
+  --bg:#111418; --surface:#1a1e24; --ink:#e8ecf0; --muted:#9ba5b0; --line:#2c333c;
+  --accent:#3aa9ec; --accent-ink:#06121c; --accent-soft:#132a3a; --ok:#4cc28a; --warn:#e88a55; color-scheme:dark}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{margin:0}
@@ -31,7 +32,12 @@ body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);
   padding:env(safe-area-inset-top,0) max(16px,env(safe-area-inset-right,0px)) calc(88px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
 .wrap{max-width:720px;margin:0 auto}
 header{display:flex;align-items:baseline;justify-content:space-between;padding-block:18px 10px}
-h1{font:700 1.9rem/1 var(--f-display);letter-spacing:.01em;margin:0}
+h1{font:700 1.9rem/1 var(--f-display);letter-spacing:.01em;margin:0;display:flex;align-items:center;gap:10px}
+.logo{height:44px;width:auto;background:#fff;border-radius:8px;padding:3px 6px}
+.login .logo{height:auto;width:220px;max-width:100%;justify-self:center;padding:8px 12px}
+.foot{text-align:center;font-size:.78rem;color:var(--muted);padding-block:18px 0}
+.foot a{color:var(--accent)}
+.linkbtn{background:none;border:0;color:var(--accent);font:600 .9rem var(--f-body);cursor:pointer;padding:4px;justify-self:center}
 h1 span{background:var(--accent);color:var(--accent-ink);padding:2px 8px;border-radius:4px;margin-left:4px}
 h2{font:600 1.3rem/1.1 var(--f-display);margin:0 0 10px;text-wrap:balance}
 .sub{color:var(--muted);font-size:.85rem}
@@ -100,7 +106,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </head>
 <body>
 <div class="wrap">
-<header><h1>Frais <span>KM</span></h1><span class="sub" id="yearLbl"></span></header>
+<header><h1><img class="logo" src="logo.png" alt="AMN CONSEIL">Frais <span>KM</span></h1><span class="sub" id="yearLbl"></span></header>
 
 <!-- NOUVEAU TRAJET -->
 <section data-tab="new">
@@ -118,7 +124,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <button class="btn ghost swap" id="swap" type="button" aria-label="Inverser départ et arrivée">⇅ Inverser</button>
     <label class="ac">Arrivée<input id="to" autocomplete="off" placeholder="Adresse, ville…"><ul hidden></ul></label>
     <div class="chips" data-for="to"></div>
-    <label>Motif<input id="motif" placeholder="Ex. réunion client BPI France"></label>
+    <label>Motif<input id="motif" placeholder="Ex. réunion client"></label>
     <div class="seg" id="segTrip"><button data-v="1" class="on" type="button">Aller simple</button><button data-v="2" type="button">Aller-retour</button></div>
     <button class="btn" id="calc" type="button">Calculer l'itinéraire</button>
     <div class="msg" id="calcMsg"></div>
@@ -163,8 +169,8 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
   <div class="panel">
     <h2>Adresses par défaut</h2>
     <p class="sub" style="margin:0">Pré-remplies à chaque nouveau trajet (Domicile → Bureau). Modifiables trajet par trajet.</p>
-    <label>Domicile<input id="pHome"></label>
-    <label>Bureau<input id="pWork"></label>
+    <label>Domicile<input id="pHome" placeholder="Ex. 12 rue de la Paix, 75002 Paris"></label>
+    <label>Bureau<input id="pWork" placeholder="Ex. Nom de l'entreprise, adresse, code postal ville"></label>
     <button class="btn ghost" id="pSave" type="button">Enregistrer les adresses</button>
     <div class="msg" id="pMsg"></div>
   </div>
@@ -201,6 +207,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a></p>
 <nav>
   <button data-go="new" class="on" type="button">Trajet</button>
   <button data-go="hist" type="button">Historique</button>
@@ -210,12 +217,16 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 
 <div id="login" class="login" hidden>
   <form class="panel" id="loginForm">
-    <h1>Frais <span>KM</span></h1>
-    <p class="sub" style="margin:0">Connectez-vous avec votre compte (le même que l'appli dépenses).</p>
+    <img class="logo" src="logo.png" alt="AMN CONSEIL">
+    <h2 style="text-align:center;margin:0">Frais kilométriques</h2>
+    <div class="seg" id="authMode"><button data-m="in" class="on" type="button">Se connecter</button><button data-m="up" type="button">Créer un compte</button></div>
+    <p class="sub" style="margin:0" id="authHelp">Gratuit. Vos trajets sont privés et synchronisés sur tous vos appareils.</p>
     <label>Email<input type="email" id="lEmail" autocomplete="username" required></label>
-    <label>Mot de passe<input type="password" id="lPass" autocomplete="current-password" required></label>
+    <label id="passWrap">Mot de passe<input type="password" id="lPass" autocomplete="current-password" minlength="8" required></label>
     <button class="btn" id="lBtn" type="submit">Se connecter</button>
+    <button class="linkbtn" id="forgot" type="button">Mot de passe oublié ?</button>
     <div class="msg" id="lMsg" role="status"></div>
+    <p class="foot" style="margin:0">© 2026 AMN CONSEIL. Application propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">conditions</a></p>
   </form>
 </div>
 <div id="toast" class="toast" hidden></div>
@@ -367,7 +378,7 @@ function setupAC(id){
 setupAC("from"); setupAC("to");
 
 /* ===== Adresses par défaut (Domicile / Bureau) ===== */
-const PLACES_DEFAUT = { home: "18 avenue de Provence, 91940 Les Ulis", work: "Bpifrance, 27-31 avenue du Général Leclerc, 94700 Maisons-Alfort" };
+const PLACES_DEFAUT = { home: "", work: "" }; // chaque utilisateur renseigne les siennes dans Réglages
 let places = Object.assign({}, PLACES_DEFAUT, LS.get("places", {}));
 /* Pour géocoder, on retire un éventuel nom d'organisme placé avant la première virgule s'il ne contient pas de chiffre */
 const geoText = s => { const p = s.split(","); return p.length > 2 && !/\d/.test(p[0]) ? p.slice(1).join(",").trim() : s; };
@@ -375,7 +386,8 @@ function setPlace(id, addr){ $("#" + id).value = addr; points[id] = null; }
 function applyDefaults(){ setPlace("from", places.home); setPlace("to", places.work); }
 function renderChips(){
   document.querySelectorAll(".chips").forEach(c => {
-    c.innerHTML = `<button type="button" data-a="home">Domicile</button><button type="button" data-a="work">Bureau</button>`;
+    c.innerHTML = (places.home ? `<button type="button" data-a="home">Domicile</button>` : "") + (places.work ? `<button type="button" data-a="work">Bureau</button>` : "")
+      + (!places.home && !places.work ? `<span class="sub">Astuce : enregistrez Domicile et Bureau dans Réglages pour les pré-remplir.</span>` : "");
     c.querySelectorAll("button").forEach(b => b.onclick = () => setPlace(c.dataset.for, places[b.dataset.a]));
   });
   $("#pHome").value = places.home; $("#pWork").value = places.work;
@@ -385,7 +397,7 @@ $("#swap").onclick = () => {
   $("#from").value = t; $("#to").value = f; points.from = points.to; points.to = pf;
 };
 $("#pSave").onclick = () => {
-  places = { home: $("#pHome").value.trim() || PLACES_DEFAUT.home, work: $("#pWork").value.trim() || PLACES_DEFAUT.work };
+  places = { home: $("#pHome").value.trim(), work: $("#pWork").value.trim() };
   LS.set("places", places); sync.settings(); renderChips(); applyDefaults();
   $("#pMsg").textContent = "Adresses enregistrées.";
 };
@@ -673,7 +685,8 @@ async function loadRemote(){
   if (v.error || t.error){ toast("Lecture impossible : " + (v.error || t.error).message, true); return; }
   vehicles = v.data.map(r => ({ id: r.id, name: r.name, cv: r.cv, elec: r.elec, plate: r.plate || "" }));
   trips = t.data.map(fromDbTrip);
-  if (s.data){ if (s.data.places) places = Object.assign({}, PLACES_DEFAUT, s.data.places); bareme = s.data.bareme || BAREME_DEFAUT; }
+  places = Object.assign({}, PLACES_DEFAUT, s.data && s.data.places || {});
+  bareme = s.data && s.data.bareme || BAREME_DEFAUT;
   // Données saisies avant la connexion sur cet appareil : proposer de les importer
   const knownT = new Set(trips.map(x => x.id)), newT = local.trips.filter(x => !knownT.has(x.id));
   const knownV = new Set(vehicles.map(x => x.id)), newV = local.vehicles.filter(x => !knownV.has(x.id));
@@ -690,17 +703,58 @@ async function loadRemote(){
   renderAll();
 }
 function showLogin(on){ $("#login").hidden = !on; }
-$("#loginForm").onsubmit = async e => {
-  e.preventDefault(); const m = $("#lMsg"); m.className = "msg"; m.textContent = "Connexion…"; $("#lBtn").disabled = true;
-  const { data, error } = await sb.auth.signInWithPassword({ email: $("#lEmail").value.trim(), password: $("#lPass").value });
-  $("#lBtn").disabled = false;
-  if (error){ m.textContent = error.message === "Invalid login credentials" ? "Email ou mot de passe incorrect." : error.message; m.className = "msg err"; return; }
-  session = data.session; m.textContent = ""; $("#lPass").value = ""; showLogin(false); $("#accInfo").textContent = "Connecté : " + session.user.email;
+/* Modes de l'écran de connexion : in (connexion), up (création), reset (lien de réinitialisation), newpass (nouveau mot de passe) */
+let authMode = "in";
+const AUTH_TXT = {
+  in:      { btn: "Se connecter", help: "Gratuit. Vos trajets sont privés et synchronisés sur tous vos appareils.", pass: true, ac: "current-password" },
+  up:      { btn: "Créer mon compte", help: "Choisissez un mot de passe d'au moins 8 caractères. Un email de confirmation vous sera envoyé.", pass: true, ac: "new-password" },
+  reset:   { btn: "Recevoir le lien", help: "Saisissez votre email : vous recevrez un lien pour choisir un nouveau mot de passe.", pass: false },
+  newpass: { btn: "Enregistrer le mot de passe", help: "Choisissez votre nouveau mot de passe (8 caractères minimum).", pass: true, ac: "new-password" }
+};
+function setAuthMode(mode){
+  authMode = mode; const t = AUTH_TXT[mode];
+  $("#lBtn").textContent = t.btn; $("#authHelp").textContent = t.help; $("#lMsg").textContent = "";
+  $("#passWrap").hidden = !t.pass; $("#lPass").required = t.pass; if (t.ac) $("#lPass").autocomplete = t.ac;
+  if (mode === "in") $("#lPass").removeAttribute("minlength"); else $("#lPass").setAttribute("minlength", "8"); // anciens comptes : pas de minimum à la connexion
+  $("#lEmail").closest("label").hidden = mode === "newpass"; $("#lEmail").required = mode !== "newpass";
+  $("#authMode").hidden = mode === "newpass";
+  document.querySelectorAll("#authMode button").forEach(b => b.classList.toggle("on", b.dataset.m === mode));
+  $("#forgot").textContent = mode === "reset" ? "← Retour à la connexion" : "Mot de passe oublié ?"; $("#forgot").hidden = mode === "up" || mode === "newpass";
+}
+document.querySelectorAll("#authMode button").forEach(b => b.onclick = () => setAuthMode(b.dataset.m));
+$("#forgot").onclick = () => setAuthMode(authMode === "reset" ? "in" : "reset");
+const appUrl = () => location.origin + location.pathname;
+const authErr = e => ({ "Invalid login credentials": "Email ou mot de passe incorrect.", "Email not confirmed": "Email non confirmé : cliquez sur le lien reçu par email.",
+  "User already registered": "Un compte existe déjà avec cet email : connectez-vous.", "Signups not allowed for this instance": "La création de compte est désactivée sur ce serveur." }[e.message] || e.message);
+async function onSignedIn(s){
+  session = s; $("#lPass").value = ""; showLogin(false); $("#accInfo").textContent = "Connecté : " + s.user.email;
   await loadRemote();
+}
+$("#loginForm").onsubmit = async e => {
+  e.preventDefault(); const m = $("#lMsg"); m.className = "msg"; m.textContent = "Patientez…"; $("#lBtn").disabled = true;
+  const email = $("#lEmail").value.trim(), password = $("#lPass").value;
+  try{
+    if (authMode === "in"){
+      const { data, error } = await sb.auth.signInWithPassword({ email, password }); if (error) throw error;
+      m.textContent = ""; await onSignedIn(data.session);
+    } else if (authMode === "up"){
+      const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: appUrl() } }); if (error) throw error;
+      if (data.session){ m.textContent = ""; await onSignedIn(data.session); }
+      else { setAuthMode("in"); m.textContent = `✓ Compte créé. Confirmez-le avec le lien envoyé à ${email}, puis connectez-vous.`; m.className = "msg ok"; }
+    } else if (authMode === "reset"){
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: appUrl() }); if (error) throw error;
+      m.textContent = `✓ Si un compte existe pour ${email}, un lien vient d'être envoyé.`; m.className = "msg ok";
+    } else if (authMode === "newpass"){
+      const { error } = await sb.auth.updateUser({ password }); if (error) throw error;
+      const { data } = await sb.auth.getSession(); setAuthMode("in"); toast("Mot de passe modifié."); await onSignedIn(data.session);
+    }
+  }catch(err){ m.textContent = authErr(err); m.className = "msg err"; }
+  finally{ $("#lBtn").disabled = false; }
 };
 $("#logout").onclick = async () => {
   if (sb) await sb.auth.signOut();
-  session = null; vehicles = []; trips = []; saveAll(); renderAll(); $("#accInfo").textContent = "Non connecté"; showLogin(true);
+  session = null; vehicles = []; trips = []; places = Object.assign({}, PLACES_DEFAUT); bareme = BAREME_DEFAUT;
+  saveAll(); LS.set("places", null); LS.set("bareme", null); renderAll(); $("#accInfo").textContent = "Non connecté"; setAuthMode("in"); showLogin(true);
 };
 
 /* ===== Init ===== */
@@ -708,11 +762,12 @@ $("#date").value = today();
 renderAll();
 (async () => {
   if (!sb){ toast("Base de données injoignable : mode local sur cet appareil.", true); return; }
+  // Retour depuis l'email « mot de passe oublié » : demander le nouveau mot de passe
+  sb.auth.onAuthStateChange(ev => { if (ev === "PASSWORD_RECOVERY"){ setAuthMode("newpass"); showLogin(true); } });
+  if (/type=recovery/.test(location.hash)) return;
   const { data } = await sb.auth.getSession();
-  session = data.session;
-  if (!session){ showLogin(true); return; }
-  $("#accInfo").textContent = "Connecté : " + session.user.email;
-  await loadRemote();
+  if (!data.session){ setAuthMode("in"); showLogin(true); return; }
+  await onSignedIn(data.session);
 })();
 if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
