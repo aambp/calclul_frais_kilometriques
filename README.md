@@ -2,7 +2,7 @@
 
 Application web gratuite de suivi des frais kilométriques.
 
-**Utiliser l'application :** https://aambp.github.io/calclul_frais_kilometriques/ — créez votre compte gratuitement.
+**Utiliser l'application :** https://km.amn-conseil.fr/ — créez votre compte gratuitement.
 
 ## Fonctionnalités
 
