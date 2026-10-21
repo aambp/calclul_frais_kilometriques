@@ -61,3 +61,9 @@ create policy "fk_trips_select" on fk_trips for select to authenticated using (u
 create policy "fk_trips_insert" on fk_trips for insert to authenticated with check (user_id = auth.uid());
 create policy "fk_trips_update" on fk_trips for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 create policy "fk_trips_delete" on fk_trips for delete to authenticated using (user_id = auth.uid() and not validated);
+
+-- Droits explicites (obligatoires pour les tables créées après le 30/10/2026 : Supabase ne les accorde plus automatiquement)
+-- Seuls les utilisateurs connectés accèdent aux données ; la RLS ci-dessus limite chacun à ses propres lignes.
+grant select, insert, update, delete on public.fk_vehicles, public.fk_trips, public.fk_settings to authenticated;
+grant select, insert, update, delete on public.fk_vehicles, public.fk_trips, public.fk_settings to service_role;
+revoke all on public.fk_vehicles, public.fk_trips, public.fk_settings from anon;
