@@ -1,0 +1,58 @@
+# Maintient le projet Supabase actif (le plan gratuit le met en pause après ~7 jours sans activité)
+# et prévient par email (ticket GitHub) si la base ne répond plus.
+name: Supabase keepalive
+
+on:
+  schedule:
+    - cron: "17 6 */2 * *"   # tous les 2 jours à 06:17 UTC
+  workflow_dispatch: {}      # lancement manuel : onglet Actions > Supabase keepalive > Run workflow
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      SB_URL: https://jwfcvgkrpevxxuxazhcy.supabase.co
+      SB_KEY: sb_publishable_a1XkSjyDqJmqeug31yFccg_CuAyRrNq   # clé publique, déjà présente dans index.html
+    steps:
+      - name: Ping de la base (fonction fk_ping)
+        id: ping
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o out.txt -w "%{http_code}" -X POST "$SB_URL/rest/v1/rpc/fk_ping" \
+              -H "apikey: $SB_KEY" -H "Content-Type: application/json" -d '{}')
+            echo "Tentative $i : HTTP $code - $(cat out.txt)"
+            [ "$code" = "200" ] && exit 0
+            sleep 20
+          done
+          echo "La base ne répond pas (HTTP $code)." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+
+      - name: Alerte (ticket GitHub, notifié par email)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="⚠ Supabase ne répond plus : projet peut-être en pause"
+          if gh issue list -R "$GITHUB_REPOSITORY" --state open --search "$title in:title" --json number -q '.[0].number' | grep -q .; then
+            echo "Alerte déjà ouverte."; exit 0
+          fi
+          gh issue create -R "$GITHUB_REPOSITORY" --title "$title" --body "Le ping automatique du $(date -u '+%d/%m/%Y %H:%M UTC') a échoué.
+
+          1. Ouvrir https://supabase.com/dashboard/project/jwfcvgkrpevxxuxazhcy
+          2. Si le projet est en pause : cliquer sur **Restore project** (les données sont conservées).
+          3. Relancer le ping : Actions > Supabase keepalive > Run workflow, puis fermer ce ticket.
+
+          Détail : $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+
+      - name: Fermer l'alerte si la base répond de nouveau
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list -R "$GITHUB_REPOSITORY" --state open --search "Supabase ne répond plus in:title" --json number -q '.[].number'); do
+            gh issue close "$n" -R "$GITHUB_REPOSITORY" --comment "La base répond de nouveau ($(date -u '+%d/%m/%Y %H:%M UTC'))."
+          done

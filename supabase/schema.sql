@@ -67,3 +67,10 @@ create policy "fk_trips_delete" on fk_trips for delete to authenticated using (u
 grant select, insert, update, delete on public.fk_vehicles, public.fk_trips, public.fk_settings to authenticated;
 grant select, insert, update, delete on public.fk_vehicles, public.fk_trips, public.fk_settings to service_role;
 revoke all on public.fk_vehicles, public.fk_trips, public.fk_settings from anon;
+
+-- Keepalive : fonction appelée tous les 2 jours par GitHub Actions (.github/workflows/supabase-keepalive.yml)
+-- pour éviter la mise en pause du projet gratuit. Elle ne lit ni n'expose aucune donnée.
+create or replace function public.fk_ping() returns timestamptz
+  language sql stable security definer set search_path = public as $$ select now() $$;
+revoke all on function public.fk_ping() from public;
+grant execute on function public.fk_ping() to anon, authenticated;
