@@ -266,6 +266,9 @@ body.wide .wrap{max-width:1140px}
 .viz-tip b{font-weight:700}
 details summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:.88rem}
 details table{margin-top:8px}
+.netbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-top:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--st-todo);background:color-mix(in srgb,var(--st-todo) 10%,var(--surface));font-size:.9rem}
+.netbar.ok{border-color:var(--accent);background:var(--accent-soft)}
+.netbar b{font-weight:700}
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
@@ -287,6 +290,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </head>
 <body>
 <div class="wrap">
+<div id="netBar" class="netbar" role="status" hidden></div>
 <header><h1><img class="logo" src="logo.png" alt="AMN CONSEIL">Frais <span>KM</span></h1><span class="sub" id="yearLbl"></span></header>
 
 <!-- ACCUEIL -->
@@ -463,7 +467,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 27</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 28</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
   <button data-go="kpi" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="13.5" width="3" height="4" rx="1"/></svg><span class="nl">Indicateurs</span></button>
@@ -654,7 +658,7 @@ function setupAC(id){
     timer = setTimeout(async () => {
       const res = await geocode(q); idx = -1;
       if (inp.value.trim() !== q) return; // la saisie a changé entre-temps
-      if (res === null){ items = []; ul.innerHTML = `<li class="info err">Service d'adresses injoignable. Ouvrez l'appli depuis Netlify ou un navigateur (pas l'aperçu Claude).</li>`; return; }
+      if (res === null){ items = []; ul.innerHTML = `<li class="info err">${navigator.onLine ? "Service d'adresses injoignable" : "Hors connexion"} : saisissez l'adresse librement.</li>`; return; }
       items = res;
       ul.innerHTML = items.length ? items.map((it, i) => `<li data-i="${i}">${esc(it.label)}</li>`).join("") : `<li class="info">Aucune adresse trouvée.</li>`;
       ul.querySelectorAll("li[data-i]").forEach(li => li.onmousedown = e => { e.preventDefault(); pick(items[+li.dataset.i]); });
@@ -754,7 +758,8 @@ $("#calc").onclick = async () => {
     $("#resPanel").hidden = false; msg.textContent = routes.length > 1 ? `${routes.length} itinéraires trouvés. Le plus long est présélectionné.` : "Un seul itinéraire trouvé.";
     selectRoute(sel);
   }catch(e){
-    msg.textContent = "Le calcul a échoué (" + e.message + "). Saisissez la distance à la main ci-dessous."; msg.className = "msg err";
+    msg.textContent = navigator.onLine ? "Le calcul a échoué (" + e.message + "). Saisissez la distance à la main ci-dessous."
+      : "Hors connexion : le calcul d'itinéraire est indisponible. Saisissez la distance aller ci-dessous (ou utilisez un favori)."; msg.className = "msg err";
     routes = []; $("#routes").innerHTML = ""; $("#resPanel").hidden = false;
   }finally{ $("#calc").disabled = false; }
 };
@@ -1822,9 +1827,12 @@ const toDbTrip = t => ({ ...uidCol(), id: t.id, date: t.date, from_addr: t.from 
 const fromDbTrip = r => ({ id: r.id, date: r.date, from: r.from_addr || "", to: r.to_addr || "", motif: r.motif || "", kmOne: +r.km_one, roundTrip: r.round_trip, km: +r.km, vehId: r.veh_id || "", validated: !!r.validated, sameDayOk: !!r.same_day_ok });
 const toDbVeh = v => ({ ...uidCol(), id: v.id, name: v.name, cv: v.cv, elec: !!v.elec, plate: v.plate || null });
 let lastDbError = "";
+const isNetErr = e => !navigator.onLine || /failed to fetch|networkerror|load failed|network request failed|fetch failed/i.test((e && e.message) || "");
 async function remote(q){
   if (!session) return true;
+  if (session.offline || !navigator.onLine){ markDirty(); return true; }
   const { error } = await q;
+  if (error && isNetErr(error)){ markDirty(); return true; }
   if (error){ lastDbError = [error.message, error.details, error.hint, error.code].filter(Boolean).join(" · "); console.error(error); toast("Non synchronisé : " + error.message, true); return false; }
   return true;
 }
@@ -1839,13 +1847,15 @@ const sync = {
 };
 function renderAll(){ renderVehicles(); renderBareme(); renderChips(); renderFavs(); renderMe(); applyDefaults(); updateTotal(); rerender(); }
 async function loadRemote(){
-  const local = { vehicles: LS.get("vehicles", []), trips: LS.get("trips", []) };
+  if (LS.get("dirty", false) && (LS.get("user", {}) || {}).id === session.user.id && !(await pushDirty())) { updateNet(); return; }
   const [v, t, s] = await Promise.all([
     sb.from("fk_vehicles").select("*").order("created_at"),
     sb.from("fk_trips").select("*").order("date"),
     sb.from("fk_settings").select("*").maybeSingle()
   ]);
-  if (v.error || t.error){ toast("Lecture impossible : " + (v.error || t.error).message, true); return; }
+  if (v.error || t.error){ const e = v.error || t.error;
+    if (isNetErr(e)) toast("Hors connexion : données de cet appareil affichées."); else toast("Lecture impossible : " + e.message, true);
+    updateNet(); return; }
   vehicles = v.data.map(r => ({ id: r.id, name: r.name, cv: r.cv, elec: r.elec, plate: r.plate || "" }));
   trips = t.data.map(fromDbTrip);
   places = Object.assign({}, PLACES_DEFAUT, s.data && s.data.places || {});
@@ -1853,8 +1863,73 @@ async function loadRemote(){
   // La base fait foi : le cache de l'appareil est remplacé (pas de fusion, source de doublons entre comptes)
   saveAll();
   LS.set("places", places); LS.set("bareme", bareme === BAREME_DEFAUT ? null : bareme);
-  renderAll();
+  snapshot(); LS.set("dirty", false);
+  renderAll(); updateNet();
 }
+
+/* ===== Hors connexion : synchronisation différée =====
+   « synced » garde l'état connu du serveur. Au retour du réseau, on envoie la différence :
+   trajets et véhicules nouveaux ou modifiés, suppressions, réglages. */
+const settingsJson = () => JSON.stringify({ places, bareme: bareme === BAREME_DEFAUT ? null : bareme });
+function snapshot(){
+  LS.set("synced", { trips: Object.fromEntries(trips.map(t => [t.id, JSON.stringify(toDbTrip(t))])),
+    vehicles: Object.fromEntries(vehicles.map(v => [v.id, JSON.stringify(toDbVeh(v))])), settings: settingsJson() });
+}
+function markDirty(){ LS.set("dirty", true); updateNet(); }
+function pendingDiff(){
+  const snap = LS.get("synced", null) || { trips: {}, vehicles: {}, settings: null };
+  const curT = Object.fromEntries(trips.map(t => [t.id, JSON.stringify(toDbTrip(t))])), curV = Object.fromEntries(vehicles.map(v => [v.id, JSON.stringify(toDbVeh(v))]));
+  return {
+    upT: trips.filter(t => snap.trips[t.id] !== curT[t.id]), delT: Object.keys(snap.trips).filter(id => !curT[id]),
+    upV: vehicles.filter(v => snap.vehicles[v.id] !== curV[v.id]), delV: Object.keys(snap.vehicles).filter(id => !curV[id]),
+    settings: snap.settings !== settingsJson(), snap
+  };
+}
+const pendingCount = d => (d = d || pendingDiff(), d.upT.length + d.delT.length + d.upV.length + d.delV.length + (d.settings ? 1 : 0));
+let pushing = false;
+async function pushDirty(){
+  if (pushing || !sb || !session || session.offline || !navigator.onLine) return false;
+  pushing = true;
+  const d = pendingDiff(), n = pendingCount(d);
+  const run = async q => { const { error } = await q; if (error) throw error; };
+  const chunks = (a, f) => { const out = []; for (let i = 0; i < a.length; i += 200) out.push(f(a.slice(i, i + 200))); return out; };
+  try{
+    if (d.upV.length) await run(sb.from("fk_vehicles").upsert(d.upV.map(toDbVeh)));
+    for (const q of chunks(d.upT, l => sb.from("fk_trips").upsert(l.map(toDbTrip)))) await run(q);
+    // Une copie validée supprimée hors connexion (nettoyage de doublons) est déverrouillée avant suppression
+    const lockedDel = d.delT.filter(id => { try{ return JSON.parse(d.snap.trips[id]).validated; }catch(e){ return false; } });
+    for (const q of chunks(lockedDel, l => sb.from("fk_trips").update({ validated: false }).in("id", l))) await run(q);
+    for (const q of chunks(d.delT, l => sb.from("fk_trips").delete().in("id", l))) await run(q);
+    for (const q of chunks(d.delV, l => sb.from("fk_vehicles").delete().in("id", l))) await run(q);
+    if (d.settings) await run(sb.from("fk_settings").upsert({ user_id: session.user.id, places, bareme: bareme === BAREME_DEFAUT ? null : bareme, updated_at: new Date().toISOString() }));
+    snapshot(); LS.set("dirty", false);
+    if (n) toast(`Connexion rétablie : ${n} modification(s) synchronisée(s).`);
+    return true;
+  }catch(e){
+    if (!isNetErr(e)) toast("Synchronisation impossible : " + e.message, true);
+    return false;
+  }finally{ pushing = false; updateNet(); }
+}
+function updateNet(){
+  const bar = $("#netBar"); if (!bar) return;
+  const off = !navigator.onLine || !!(session && session.offline), n = LS.get("dirty", false) ? pendingCount() : 0;
+  bar.hidden = !off && !n; bar.className = "netbar" + (off ? "" : " ok");
+  bar.innerHTML = off
+    ? `<span>📴 <b>Hors connexion</b> · vous pouvez saisir, modifier et valider vos trajets${n ? ` · <b>${n} modification(s)</b> en attente` : ""}. Tout sera synchronisé au retour du réseau.</span>`
+    : `<span>🔄 <b>${n} modification(s)</b> faites hors connexion à synchroniser.</span><button class="btn mini" type="button" id="netSync">Synchroniser</button>`;
+  if ($("#netSync")) $("#netSync").onclick = reconnect;
+}
+/* Retour du réseau : session réelle, envoi des modifications, puis rechargement depuis la base */
+async function reconnect(){
+  if (!sb || !navigator.onLine) return updateNet();
+  const { data } = await sb.auth.getSession();
+  if (!data.session){ if (session && session.offline){ toast("Reconnectez-vous pour synchroniser vos trajets.", true); setAuthMode("in"); showLogin(true); } return updateNet(); }
+  session = data.session; $("#accInfo").textContent = "Connecté : " + session.user.email;
+  await loadRemote();
+}
+addEventListener("online", () => setTimeout(reconnect, 800));
+addEventListener("offline", updateNet);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && navigator.onLine && LS.get("dirty", false)) reconnect(); });
 function showLogin(on){ $("#login").hidden = !on; }
 /* Modes de l'écran de connexion : in (connexion), up (création), reset (lien de réinitialisation), newpass (nouveau mot de passe) */
 let authMode = "in";
@@ -1880,6 +1955,9 @@ const appUrl = () => location.origin + location.pathname;
 const authErr = e => ({ "Invalid login credentials": "Email ou mot de passe incorrect.", "Email not confirmed": "Email non confirmé : cliquez sur le lien reçu par email.",
   "User already registered": "Un compte existe déjà avec cet email : connectez-vous.", "Signups not allowed for this instance": "La création de compte est désactivée sur ce serveur." }[e.message] || e.message);
 async function onSignedIn(s){
+  const prev = (LS.get("user", {}) || {}).id;
+  if (prev && prev !== s.user.id){ LS.set("dirty", false); LS.set("synced", null); } // autre compte : rien à reporter
+  LS.set("user", { id: s.user.id, email: s.user.email });
   session = s; $("#lPass").value = ""; showLogin(false); $("#accInfo").textContent = "Connecté : " + s.user.email;
   await loadRemote();
 }
@@ -1905,9 +1983,13 @@ $("#loginForm").onsubmit = async e => {
   finally{ $("#lBtn").disabled = false; }
 };
 $("#logout").onclick = async () => {
-  if (sb) await sb.auth.signOut();
+  if (LS.get("dirty", false) && pendingCount() && $("#logout").dataset.confirm !== "1"){
+    $("#logout").dataset.confirm = "1"; $("#logout").textContent = `Se déconnecter et perdre ${pendingCount()} modification(s) non synchronisée(s)`; return; }
+  $("#logout").dataset.confirm = ""; $("#logout").textContent = "Se déconnecter";
+  if (sb) try{ await sb.auth.signOut(); }catch(e){}
   session = null; vehicles = []; trips = []; places = Object.assign({}, PLACES_DEFAUT); bareme = BAREME_DEFAUT;
-  saveAll(); LS.set("places", null); LS.set("bareme", null); renderAll(); $("#accInfo").textContent = "Non connecté"; setAuthMode("in"); showLogin(true);
+  saveAll(); LS.set("places", null); LS.set("bareme", null); LS.set("user", null); LS.set("dirty", false); LS.set("synced", null);
+  renderAll(); updateNet(); $("#accInfo").textContent = "Non connecté"; setAuthMode("in"); showLogin(true);
 };
 
 /* ===== Init ===== */
@@ -1915,15 +1997,23 @@ document.body.classList.add("wide");
 $("#date").value = today();
 renderAll();
 (async () => {
-  if (!sb){ toast("Base de données injoignable : mode local sur cet appareil.", true); return; }
+  const cached = LS.get("user", null);
+  const offlineStart = () => { session = { offline: true, user: cached }; showLogin(false); $("#accInfo").textContent = "Connecté (hors connexion) : " + cached.email; renderAll(); updateNet(); };
+  if (!sb){ if (cached) return offlineStart(); toast("Connexion internet requise pour la première ouverture.", true); return; }
   // Retour depuis l'email « mot de passe oublié » : demander le nouveau mot de passe
   sb.auth.onAuthStateChange(ev => { if (ev === "PASSWORD_RECOVERY"){ setAuthMode("newpass"); showLogin(true); } });
   if (/type=recovery/.test(location.hash)) return;
-  const { data } = await sb.auth.getSession();
-  if (!data.session){ setAuthMode("in"); showLogin(true); return; }
+  let data = { session: null };
+  try{ ({ data } = await sb.auth.getSession()); }catch(e){}
+  if (!data.session){
+    if (cached && !navigator.onLine) return offlineStart();
+    setAuthMode("in"); showLogin(true);
+    if (!navigator.onLine) $("#lMsg").textContent = "Hors connexion : la première connexion nécessite internet.";
+    return;
+  }
   await onSignedIn(data.session);
 })();
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>
 </html>

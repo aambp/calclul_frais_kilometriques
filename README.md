@@ -16,6 +16,7 @@ Application web gratuite de suivi des frais kilométriques.
 - Import CSV (export de l'appli ou d'outils de notes de frais) et sauvegarde JSON
 - Comptes individuels, données privées et synchronisées (Supabase, RLS)
 - Installable sur ordinateur et téléphone
+- Fonctionne hors connexion : saisie, modification et validation des trajets, synchronisation automatique au retour du réseau
 
 ## Propriété et licence
 
