@@ -269,6 +269,12 @@ details table{margin-top:8px}
 .netbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;margin-top:12px;padding:10px 14px;border-radius:10px;border:1px solid var(--st-todo);background:color-mix(in srgb,var(--st-todo) 10%,var(--surface));font-size:.9rem}
 .netbar.ok{border-color:var(--accent);background:var(--accent-soft)}
 .netbar b{font-weight:700}
+.pw{position:relative;display:block}
+.pw input{padding-right:48px}
+.pw-eye{position:absolute;top:50%;right:4px;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
+.pw-eye:hover{color:var(--ink);background:var(--accent-soft)}
+.pw-eye .eye{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.pw-eye .slash{display:none} .pw-eye[aria-pressed="true"] .slash{display:inline}
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
@@ -467,7 +473,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 28</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 29</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
   <button data-go="kpi" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="13.5" width="3" height="4" rx="1"/></svg><span class="nl">Indicateurs</span></button>
@@ -486,7 +492,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
     <div class="seg" id="authMode"><button data-m="in" class="on" type="button">Se connecter</button><button data-m="up" type="button">Créer un compte</button></div>
     <p class="sub" style="margin:0" id="authHelp">Gratuit. Vos trajets sont privés et synchronisés sur tous vos appareils.</p>
     <label>Email<input type="email" id="lEmail" autocomplete="username" required></label>
-    <label id="passWrap">Mot de passe<input type="password" id="lPass" autocomplete="current-password" minlength="8" required></label>
+    <label id="passWrap">Mot de passe<span class="pw"><input type="password" id="lPass" autocomplete="current-password" minlength="8" required><button type="button" class="pw-eye" id="pwEye" aria-label="Afficher le mot de passe" aria-pressed="false"><svg class="eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path class="slash" d="M4 4l16 16"/></svg></button></span></label>
     <button class="btn" id="lBtn" type="submit">Se connecter</button>
     <button class="linkbtn" id="forgot" type="button">Mot de passe oublié ?</button>
     <div class="msg" id="lMsg" role="status"></div>
@@ -1939,7 +1945,10 @@ const AUTH_TXT = {
   reset:   { btn: "Recevoir le lien", help: "Saisissez votre email : vous recevrez un lien pour choisir un nouveau mot de passe.", pass: false },
   newpass: { btn: "Enregistrer le mot de passe", help: "Choisissez votre nouveau mot de passe (8 caractères minimum).", pass: true, ac: "new-password" }
 };
+function showPass(on){ $("#lPass").type = on ? "text" : "password"; $("#pwEye").setAttribute("aria-pressed", on); $("#pwEye").setAttribute("aria-label", on ? "Masquer le mot de passe" : "Afficher le mot de passe"); }
+$("#pwEye").onclick = () => { showPass($("#lPass").type === "password"); $("#lPass").focus(); };
 function setAuthMode(mode){
+  showPass(false);
   authMode = mode; const t = AUTH_TXT[mode];
   $("#lBtn").textContent = t.btn; $("#authHelp").textContent = t.help; $("#lMsg").textContent = "";
   $("#passWrap").hidden = !t.pass; $("#lPass").required = t.pass; if (t.ac) $("#lPass").autocomplete = t.ac;
