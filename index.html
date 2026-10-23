@@ -275,6 +275,13 @@ details table{margin-top:8px}
 .pw-eye:hover{color:var(--ink);background:var(--accent-soft)}
 .pw-eye .eye{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .pw-eye .slash{display:none} .pw-eye[aria-pressed="true"] .slash{display:inline}
+.acc-details{display:grid;gap:6px;font-size:.9rem}
+.acc-details:empty{display:none}
+.acc-details h3{margin:6px 0 0;font:600 .78rem var(--f-body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.logins{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.logins li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;padding:6px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+.logins li:last-child{border-bottom:0}
+.logins .now{color:var(--st-ok);font-weight:600}
 .day{border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;gap:4px}
 .day h3{font:600 1.1rem var(--f-display);margin:0;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
 nav button.on{color:var(--accent);background:var(--accent-soft)}
@@ -423,6 +430,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
   <div class="panel">
     <h2>Compte</h2>
     <div class="sub" id="accInfo">Non connecté</div>
+    <div id="accDetails" class="acc-details"></div>
     <button class="btn ghost" id="logout" type="button">Se déconnecter</button>
   </div>
   <div class="panel">
@@ -473,7 +481,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 30</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 31</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
   <button data-go="kpi" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="13.5" width="3" height="4" rx="1"/></svg><span class="nl">Indicateurs</span></button>
@@ -1856,7 +1864,7 @@ const sync = {
   all: async () => (vehicles.length ? await remote(sb && session && sb.from("fk_vehicles").upsert(vehicles.map(toDbVeh))) : true)
                 && (trips.length ? await remote(sb && session && sb.from("fk_trips").upsert(trips.map(toDbTrip))) : true)
 };
-function renderAll(){ renderVehicles(); renderBareme(); renderChips(); renderFavs(); renderMe(); applyDefaults(); updateTotal(); rerender(); }
+function renderAll(){ renderVehicles(); renderBareme(); renderChips(); renderFavs(); renderMe(); renderAccount(); applyDefaults(); updateTotal(); rerender(); }
 async function loadRemote(){
   if (LS.get("dirty", false) && (LS.get("user", {}) || {}).id === session.user.id && !(await pushDirty())) { updateNet(); return; }
   const [v, t, s] = await Promise.all([
@@ -1975,6 +1983,32 @@ async function onSignedIn(s){
   LS.set("user", { id: s.user.id, email: s.user.email });
   session = s; $("#lPass").value = ""; showLogin(false); $("#accInfo").textContent = "Connecté : " + s.user.email;
   await loadRemote();
+  await recordLogin();
+}
+/* Historique des connexions (5 dernières), conservé avec les réglages du compte */
+function deviceName(){
+  const u = navigator.userAgent, os = /iPhone/.test(u) ? "iPhone" : /iPad/.test(u) || (/Macintosh/.test(u) && navigator.maxTouchPoints > 1) ? "iPad"
+    : /Android/.test(u) ? "Android" : /Macintosh/.test(u) ? "Mac" : /Windows/.test(u) ? "Windows" : /Linux/.test(u) ? "Linux" : "Appareil";
+  const app = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+  const br = /Edg\//.test(u) ? "Edge" : /CriOS|Chrome\//.test(u) ? "Chrome" : /FxiOS|Firefox\//.test(u) ? "Firefox" : /Safari\//.test(u) ? "Safari" : "navigateur";
+  return `${os} · ${app ? "appli installée" : br}`;
+}
+const fmtDT = iso => new Date(iso).toLocaleString("fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+async function recordLogin(){
+  if (!session || session.offline) return renderAccount();
+  const list = places.logins = (places.logins || []).slice(0, 5), dev = deviceName(), now = new Date();
+  // Une nouvelle ligne par connexion ; une simple réouverture dans les 30 min sur le même appareil met à jour la ligne
+  if (list[0] && list[0].device === dev && now - new Date(list[0].at) < 30 * 60000) list[0].at = now.toISOString();
+  else list.unshift({ at: now.toISOString(), device: dev });
+  places.logins = list.slice(0, 5); LS.set("places", places); renderAccount(); await sync.settings();
+}
+function renderAccount(){
+  const box = $("#accDetails"); if (!box) return;
+  if (!session){ box.innerHTML = ""; return; }
+  const u = session.user || {}, list = places.logins || [];
+  box.innerHTML = (u.created_at ? `<div>Compte créé le <b>${new Date(u.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</b></div>` : "")
+    + (list.length ? `<h3>Dernières connexions</h3><ul class="logins">${list.map((l, i) => `<li><span>${esc(fmtDT(l.at))}${i === 0 ? ` <span class="now">· en cours</span>` : ""}</span><span class="sub">${esc(l.device)}</span></li>`).join("")}</ul>
+      <p class="sub" style="margin:0">Une connexion que vous ne reconnaissez pas ? Changez votre mot de passe (Se déconnecter → Mot de passe oublié).</p>` : "");
 }
 $("#loginForm").onsubmit = async e => {
   e.preventDefault(); const m = $("#lMsg"); m.className = "msg"; m.textContent = "Patientez…"; $("#lBtn").disabled = true;

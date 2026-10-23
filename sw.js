@@ -2,7 +2,7 @@
 // - Fichiers de l'appli : réseau d'abord (toujours la dernière version), cache en secours.
 // - Bibliothèques externes (versions figées) : cache d'abord, préchargées à l'installation.
 // - Base de données, itinéraires, adresses, cartes : jamais mis en cache (réseau seulement).
-const CACHE = "frais-km-v30";
+const CACHE = "frais-km-v31";
 const APP = ["./", "./index.html", "./manifest.webmanifest", "./logo.png", "./icon-192.png", "./icon-512.png"];
 const LIBS = [
   "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
