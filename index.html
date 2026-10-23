@@ -473,7 +473,7 @@ nav button.on{color:var(--accent);background:var(--accent-soft)}
 </section>
 </div>
 
-<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 29</p>
+<p class="foot wrap">© 2026 AMN CONSEIL · Propriété d'AMN CONSEIL, utilisation gratuite autorisée · <a href="https://github.com/aambp/calclul_frais_kilometriques/blob/main/LICENSE" target="_blank" rel="noopener">Conditions</a> · version 30</p>
 <nav aria-label="Navigation principale">
   <div class="nav-brand"><img src="logo.png" alt="AMN CONSEIL"><span>Frais <b>KM</b></span></div>
   <button data-go="kpi" class="on" type="button"><svg class="ni" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16"/><rect x="5.5" y="11" width="3" height="6.5" rx="1"/><rect x="10.5" y="6" width="3" height="11.5" rx="1"/><rect x="15.5" y="13.5" width="3" height="4" rx="1"/></svg><span class="nl">Indicateurs</span></button>
@@ -1824,7 +1824,12 @@ let kpiRT; addEventListener("resize", () => { clearTimeout(kpiRT); kpiRT = setTi
 const SB_URL = "https://jwfcvgkrpevxxuxazhcy.supabase.co";
 const SB_KEY = "sb_publishable_a1XkSjyDqJmqeug31yFccg_CuAyRrNq";
 let sb = null, session = null;
-try{ sb = window.supabase.createClient(SB_URL, SB_KEY); }catch(e){}
+const fetchTimeout = (url, opts = {}) => {
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 15000);
+  if (opts.signal) opts.signal.addEventListener("abort", () => ctl.abort());
+  return fetch(url, { ...opts, signal: ctl.signal }).catch(e => { throw e.name === "AbortError" ? new TypeError("Failed to fetch (délai dépassé)") : e; }).finally(() => clearTimeout(t));
+};
+try{ sb = window.supabase.createClient(SB_URL, SB_KEY, { global: { fetch: fetchTimeout } }); }catch(e){}
 let toastT;
 function toast(txt, err){ const t = $("#toast"); t.textContent = txt; t.className = "toast" + (err ? " err" : ""); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, err ? 6000 : 2500); }
 // user_id envoyé explicitement : en envoi groupé, une colonne absente arrive vide au lieu de prendre sa valeur par défaut
@@ -1961,7 +1966,8 @@ function setAuthMode(mode){
 document.querySelectorAll("#authMode button").forEach(b => b.onclick = () => setAuthMode(b.dataset.m));
 $("#forgot").onclick = () => setAuthMode(authMode === "reset" ? "in" : "reset");
 const appUrl = () => location.origin + location.pathname;
-const authErr = e => ({ "Invalid login credentials": "Email ou mot de passe incorrect.", "Email not confirmed": "Email non confirmé : cliquez sur le lien reçu par email.",
+const NET_MSG = "Impossible de joindre le serveur. Vérifiez votre connexion ou changez de réseau (Wi-Fi ⇄ 4G), puis réessayez.";
+const authErr = e => isNetErr(e) || /load failed|failed to fetch|networkerror|délai dépassé|aborted/i.test(e.message || "") ? NET_MSG : ({ "Invalid login credentials": "Email ou mot de passe incorrect.", "Email not confirmed": "Email non confirmé : cliquez sur le lien reçu par email.",
   "User already registered": "Un compte existe déjà avec cet email : connectez-vous.", "Signups not allowed for this instance": "La création de compte est désactivée sur ce serveur." }[e.message] || e.message);
 async function onSignedIn(s){
   const prev = (LS.get("user", {}) || {}).id;
